@@ -33,64 +33,71 @@ export function Slider({ slides }: { slides: Slide[] }) {
 
   return (
     <section className="relative h-[240px] w-full overflow-hidden rounded-2xl bg-zinc-900 sm:h-[340px] lg:h-[440px]">
-      {slides.map((slide, index) => (
-        <div
-          className={`absolute inset-0 transition-opacity duration-700 ${
-            index === active ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-          key={slide.id}
-        >
-          {failedSlides.includes(slide.id) ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-orange-900" />
-          ) : (
-            <Image
-              alt={slide.title ?? "Promosyon ürünleri"}
-              className="object-cover"
-              fill
-              onError={() =>
-                setFailedSlides((current) =>
-                  current.includes(slide.id)
-                    ? current
-                    : [...current, slide.id]
-                )
-              }
-              priority={index === 0}
-              sizes="100vw"
-              src={slide.image_url}
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/75 via-zinc-950/35 to-transparent" />
-          <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-14">
-            {slide.title ? (
-              <h2 className="max-w-xl text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
-                {slide.title}
-              </h2>
-            ) : null}
-            {slide.subtitle ? (
-              <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-200 sm:text-base">
-                {slide.subtitle}
-              </p>
-            ) : null}
-            {slide.link ? (
-              <Link
-                className="mt-5 inline-flex w-fit items-center gap-2 rounded-full bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500"
-                href={slide.link}
-              >
-                Hemen Keşfet
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" />
-                </svg>
-              </Link>
+      {slides.map((slide, index) => {
+        const hasCaption = Boolean(slide.title || slide.subtitle);
+        return (
+          <div
+            className={`absolute inset-0 transition-opacity duration-700 ${
+              index === active ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+            key={slide.id}
+          >
+            {failedSlides.includes(slide.id) ? (
+              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-orange-900" />
+            ) : (
+              <Image
+                alt={slide.title ?? "Promosyon ürünleri"}
+                className="object-cover"
+                fill
+                onError={() =>
+                  setFailedSlides((current) =>
+                    current.includes(slide.id)
+                      ? current
+                      : [...current, slide.id]
+                  )
+                }
+                priority={index === 0}
+                sizes="100vw"
+                src={slide.image_url}
+              />
+            )}
+            {hasCaption ? (
+              <>
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/75 via-zinc-950/35 to-transparent" />
+                <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-14">
+                  {slide.title ? (
+                    <h2 className="max-w-xl text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
+                      {slide.title}
+                    </h2>
+                  ) : null}
+                  {slide.subtitle ? (
+                    <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-200 sm:text-base">
+                      {slide.subtitle}
+                    </p>
+                  ) : null}
+                  {slide.link ? (
+                    <Link
+                      className="mt-5 inline-flex w-fit items-center gap-2 rounded-full bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500"
+                      href={slide.link}
+                    >
+                      Hemen Keşfet
+                      <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" />
+                      </svg>
+                    </Link>
+                  ) : null}
+                </div>
+              </>
             ) : null}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {slides.length > 1 ? (
         <>
