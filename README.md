@@ -150,8 +150,9 @@ npm run start        # varsayılan port 3000
 ```
 
 - SQLite dosyası `data/` klasöründe tutulur; düzenli yedekleyin.
-- Slider ve kategori görselleri `public/uploads/slider/` ve
-  `public/uploads/categories/` altında tutulur; bu klasörleri de yedekleyin.
+- Slider, kategori ve logo görselleri `public/uploads/slider/`,
+  `public/uploads/categories/` ve `public/uploads/logo/` altında tutulur; bu
+  klasörleri de yedekleyin.
 - `data/` ve `public/uploads/` klasörleri sürüm kontrolüne dahil edilmez.
 - Cron örneği (her gün 04:00):
 

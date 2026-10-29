@@ -1,6 +1,8 @@
 import { SyncPricesButton } from "@/components/admin/sync-buttons";
+import { LogoForm } from "@/components/admin/logo-form";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { db } from "@/lib/db";
+import { getSiteLogoUrl } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
@@ -10,6 +12,7 @@ export const metadata = {
 
 export default async function AdminSettingsPage() {
   const priceXmlUrl = getPriceXmlUrl() ?? "";
+  const logoUrl = await getSiteLogoUrl();
   const productXmlUrl =
     process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
   const variantPrices = db
@@ -26,6 +29,18 @@ export default async function AdminSettingsPage() {
           Veri kaynakları ve fiyatlandırma ayarları
         </p>
       </div>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Site Logosu</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Yüklenen logo, sitede &quot;Promosyon Eticaret&quot; yazısının
+          göründüğü header ve footer alanlarında gösterilir. Logo
+          yüklenmediğinde yazı korunur.
+        </p>
+        <div className="mt-4">
+          <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <h3 className="text-base font-bold text-zinc-900">

@@ -1,5 +1,6 @@
 import { cacheLife } from "next/cache";
 import Link from "next/link";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { getCategoryTree } from "@/lib/queries";
 
 async function getCopyrightYear(): Promise<number> {
@@ -16,9 +17,7 @@ export async function Footer() {
     <footer className="mt-16 border-t border-zinc-200 bg-zinc-900 text-zinc-300">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-4">
         <div className="md:col-span-2">
-          <p className="text-xl font-bold text-white">
-            Promosyon<span className="text-orange-500">Eticaret</span>
-          </p>
+          <SiteLogo href={null} tone="dark" />
           <p className="mt-3 max-w-md text-sm leading-6 text-zinc-400">
             Kurumsal promosyon ürünlerinde kalem, çanta, teknoloji ve daha
             fazlası. Şirket logonuzla özelleştirilebilen binlerce ürün çeşidi.

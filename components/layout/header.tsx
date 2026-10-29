@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import { CartLink } from "./cart-link";
+import { SiteLogo } from "./site-logo";
 import { SiteNav } from "./site-nav";
 import { UserMenu } from "./user-menu";
 import {
@@ -73,12 +73,7 @@ export async function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-        <Link
-          className="shrink-0 text-xl font-bold tracking-tight text-zinc-900"
-          href="/"
-        >
-          Promosyon<span className="text-orange-600">Eticaret</span>
-        </Link>
+        <SiteLogo />
         <div className="hidden flex-1 md:block">
           <SearchForm />
         </div>

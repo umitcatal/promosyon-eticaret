@@ -2,13 +2,15 @@
 
 import { refresh, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
-import { db, setSetting } from "@/lib/db";
+import { db, getSetting, setSetting } from "@/lib/db";
 import { ORDER_STATUSES } from "@/lib/orders";
 import { syncCatalog } from "@/lib/sync";
 import {
   deleteCategoryImage,
+  deleteLogoImage,
   deleteSliderImage,
   saveCategoryImage,
+  saveLogoImage,
   saveSliderImage,
 } from "@/lib/uploads";
 
@@ -305,6 +307,38 @@ export async function saveSettingsAction(
   const priceXmlUrl = String(formData.get("priceXmlUrl") ?? "").trim();
   setSetting("price_xml_url", priceXmlUrl);
   return { ok: true, message: "Ayarlar kaydedildi." };
+}
+
+export async function saveLogoAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const current = getSetting("logo_url");
+  const file = formData.get("logo");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Lütfen bir logo görseli seçin." };
+  }
+
+  try {
+    const newImage = await saveLogoImage(file);
+    setSetting("logo_url", newImage);
+    if (current && current !== newImage) await deleteLogoImage(current);
+    updateTag("settings");
+    return { ok: true, message: "Logo güncellendi.", nonce: crypto.randomUUID() };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function removeLogoAction(_formData: FormData): Promise<void> {
+  await requireAdmin();
+  const current = getSetting("logo_url");
+  setSetting("logo_url", "");
+  if (current) await deleteLogoImage(current);
+  updateTag("settings");
 }
 
 export async function syncPricesAction(): Promise<AdminActionState> {

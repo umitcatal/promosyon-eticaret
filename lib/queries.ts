@@ -1,5 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
-import { db } from "./db";
+import { db, getSetting } from "./db";
 import type {
   Category,
   CategoryNode,
@@ -164,6 +164,15 @@ export async function getMenuItemsCount(): Promise<number> {
   };
 
   return row.total;
+}
+
+export async function getSiteLogoUrl(): Promise<string | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  const url = getSetting("logo_url");
+  return url && url.trim() ? url.trim() : null;
 }
 
 export async function getAllProducts(
