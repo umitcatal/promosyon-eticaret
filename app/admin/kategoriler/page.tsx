@@ -1,7 +1,5 @@
-import {
-  CategoryForm,
-  type CategoryAdminRow,
-} from "@/components/admin/category-form";
+import { AdminCategoryList } from "@/components/admin/category-list";
+import { type CategoryAdminRow } from "@/components/admin/category-form";
 import { db } from "@/lib/db";
 
 export const metadata = {
@@ -19,21 +17,5 @@ export default async function AdminCategoriesPage() {
     )
     .all() as CategoryAdminRow[];
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-zinc-900">Kategoriler</h2>
-        <p className="text-sm text-zinc-500">
-          {rows.length} kategori • Ana sayfada gösterilecek kategori görselini
-          buradan yükleyin
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <CategoryForm category={row} key={row.id} />
-        ))}
-      </div>
-    </div>
-  );
+  return <AdminCategoryList rows={rows} />;
 }
