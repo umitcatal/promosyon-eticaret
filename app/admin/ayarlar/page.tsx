@@ -1,8 +1,9 @@
 import { SyncPricesButton } from "@/components/admin/sync-buttons";
 import { LogoForm } from "@/components/admin/logo-form";
 import { SettingsForm } from "@/components/admin/settings-form";
+import { VatRateForm } from "@/components/admin/vat-rate-form";
 import { db } from "@/lib/db";
-import { getSiteLogoUrl } from "@/lib/queries";
+import { getSiteLogoUrl, getVatRate } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
@@ -13,6 +14,7 @@ export const metadata = {
 export default async function AdminSettingsPage() {
   const priceXmlUrl = getPriceXmlUrl() ?? "";
   const logoUrl = await getSiteLogoUrl();
+  const vatRate = getVatRate();
   const productXmlUrl =
     process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
   const variantPrices = db
@@ -71,6 +73,18 @@ export default async function AdminSettingsPage() {
             Aktif {variantPrices.total} varyantın {variantPrices.priced ?? 0}
             &apos;inde fiyat tanımlı.
           </p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">KDV Oranı</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Sepette ara toplam, ürünlerin KDV hariç fiyatlarının toplamıdır.
+          Burada seçilen oran ara toplama eklenerek KDV tutarı ve KDV dahil
+          toplam hesaplanır.
+        </p>
+        <div className="mt-4">
+          <VatRateForm vatRate={vatRate} />
         </div>
       </section>
     </div>

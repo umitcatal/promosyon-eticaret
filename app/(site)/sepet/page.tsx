@@ -9,6 +9,8 @@ import { firstImage, formatPrice } from "@/lib/format";
 import { getCart } from "@/lib/cart";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getVatRate } from "@/lib/queries";
+import { breakdownVat } from "@/lib/vat";
 
 export const instant = false;
 
@@ -49,10 +51,14 @@ export default async function CartPage() {
       : [];
 
   const user = await getCurrentUser();
-  const total = rows.every((row) => row.price !== null)
-    ? rows.reduce(
-        (sum, row) => sum + (row.price ?? 0) * (cart[String(row.id)] ?? 1),
-        0
+  const vatRate = getVatRate();
+  const totals = rows.every((row) => row.price !== null)
+    ? breakdownVat(
+        rows.reduce(
+          (sum, row) => sum + (row.price ?? 0) * (cart[String(row.id)] ?? 1),
+          0
+        ),
+        vatRate
       )
     : null;
   const itemCount = rows.reduce(
@@ -207,11 +213,27 @@ export default async function CartPage() {
               <dd className="font-medium text-zinc-900">{itemCount}</dd>
             </div>
             <div className="flex justify-between text-zinc-600">
-              <dt>Ara toplam</dt>
+              <dt>Ara Toplam:</dt>
               <dd className="font-medium text-zinc-900">
-                {total !== null ? formatPrice(total) : "Teklif ile belirlenecek"}
+                {totals !== null
+                  ? formatPrice(totals.net)
+                  : "Teklif ile belirlenecek"}
               </dd>
             </div>
+            {totals ? (
+              <>
+                <div className="flex justify-between text-zinc-600">
+                  <dt>KDV (%{vatRate}):</dt>
+                  <dd className="font-medium text-zinc-900">
+                    {formatPrice(totals.vat)}
+                  </dd>
+                </div>
+                <div className="flex justify-between border-t border-zinc-200 pt-2 text-zinc-900">
+                  <dt className="font-bold">KDV Dahil Toplam:</dt>
+                  <dd className="font-bold">{formatPrice(totals.gross)}</dd>
+                </div>
+              </>
+            ) : null}
           </dl>
 
           <form action={createOrderAction} className="mt-5 space-y-3">

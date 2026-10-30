@@ -11,6 +11,7 @@ import type {
   SliderItem,
   VariantRow,
 } from "./types";
+import { parseVatRate, VAT_RATE_SETTING_KEY } from "./vat";
 
 export const PAGE_SIZE = 12;
 
@@ -173,6 +174,10 @@ export async function getSiteLogoUrl(): Promise<string | null> {
 
   const url = getSetting("logo_url");
   return url && url.trim() ? url.trim() : null;
+}
+
+export function getVatRate(): number {
+  return parseVatRate(getSetting(VAT_RATE_SETTING_KEY));
 }
 
 export async function getAllProducts(

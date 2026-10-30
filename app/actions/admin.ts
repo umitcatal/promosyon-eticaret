@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db, getSetting, setSetting } from "@/lib/db";
 import { ORDER_STATUSES } from "@/lib/orders";
 import { syncCatalog } from "@/lib/sync";
+import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
   deleteCategoryImage,
   deleteLogoImage,
@@ -307,6 +308,22 @@ export async function saveSettingsAction(
   const priceXmlUrl = String(formData.get("priceXmlUrl") ?? "").trim();
   setSetting("price_xml_url", priceXmlUrl);
   return { ok: true, message: "Ayarlar kaydedildi." };
+}
+
+export async function saveVatRateAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const raw = String(formData.get("vatRate") ?? "")
+    .trim()
+    .replace(",", ".");
+  const rate = raw === "" ? Number.NaN : Number(raw);
+  if (!VAT_RATES.includes(rate as (typeof VAT_RATES)[number])) {
+    return { error: "Geçerli bir KDV oranı seçin." };
+  }
+  setSetting(VAT_RATE_SETTING_KEY, String(rate));
+  return { ok: true, message: `KDV oranı %${rate} olarak kaydedildi.` };
 }
 
 export async function saveLogoAction(
