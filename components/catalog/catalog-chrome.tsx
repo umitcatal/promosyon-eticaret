@@ -55,7 +55,7 @@ export function CatalogHeading({
           {title}
         </h1>
       </div>
-      <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
         <p className="font-mono text-[11px] tracking-[0.14em] text-ink-muted uppercase">
           {meta}
         </p>
