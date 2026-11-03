@@ -3,6 +3,7 @@ import { db, getSetting } from "./db";
 import type {
   Category,
   CategoryNode,
+  CategoryTreeItem,
   MenuItem,
   MenuNavItem,
   Page,
@@ -67,11 +68,7 @@ function mapProductListRow(row: Record<string, unknown>): ProductListItem {
   };
 }
 
-export async function getCategoryTree(): Promise<CategoryNode[]> {
-  "use cache";
-  cacheLife("hours");
-  cacheTag("catalog");
-
+function fetchCategoryNodes(): CategoryNode[] {
   const rows = db
     .prepare(
       "SELECT * FROM categories WHERE active = 1 ORDER BY sort_order, name"
@@ -96,6 +93,92 @@ export async function getCategoryTree(): Promise<CategoryNode[]> {
   }
 
   return build(null, new Set());
+}
+
+export async function getCategoryTree(): Promise<CategoryNode[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+
+  return fetchCategoryNodes();
+}
+
+export async function getHomeCategoryTree(): Promise<CategoryNode[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+
+  const selected: CategoryNode[] = [];
+
+  function collect(nodes: CategoryNode[]): void {
+    for (const node of nodes) {
+      if (node.show_on_home === 1) selected.push(node);
+      collect(node.children);
+    }
+  }
+
+  collect(fetchCategoryNodes());
+  return selected;
+}
+
+export async function getCategorySidebarTree(): Promise<{
+  nodes: CategoryTreeItem[];
+  total: number;
+}> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+
+  const rows = db
+    .prepare(
+      "SELECT * FROM categories WHERE active = 1 ORDER BY sort_order, name"
+    )
+    .all() as Category[];
+
+  const counts = new Map<number, number>();
+  const countRows = db
+    .prepare(
+      `SELECT category_id, COUNT(*) AS total FROM products
+       WHERE active = 1 AND is_hidden = 0 AND category_id IS NOT NULL
+       GROUP BY category_id`
+    )
+    .all() as { category_id: number; total: number }[];
+  for (const row of countRows) counts.set(row.category_id, row.total);
+
+  const byParent = new Map<number | null, Category[]>();
+  for (const row of rows) {
+    const list = byParent.get(row.parent_id) ?? [];
+    list.push(row);
+    byParent.set(row.parent_id, list);
+  }
+
+  function build(
+    parentId: number | null,
+    seen: Set<number>
+  ): CategoryTreeItem[] {
+    const list = byParent.get(parentId) ?? [];
+    return list
+      .filter((row) => !seen.has(row.id))
+      .map((row) => {
+        const nextSeen = new Set(seen).add(row.id);
+        const children = build(row.id, nextSeen);
+        return {
+          ...row,
+          children,
+          product_count:
+            (counts.get(row.id) ?? 0) +
+            children.reduce((sum, child) => sum + child.product_count, 0),
+        };
+      });
+  }
+
+  const totalRow = db
+    .prepare(
+      "SELECT COUNT(*) AS total FROM products WHERE active = 1 AND is_hidden = 0"
+    )
+    .get() as { total: number };
+
+  return { nodes: build(null, new Set()), total: totalRow.total };
 }
 
 export async function getMenuNavItems(): Promise<MenuNavItem[]> {

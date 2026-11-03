@@ -11,8 +11,8 @@ import { HeroFallback, Slider } from "@/components/catalog/slider";
 import { Reveal } from "@/components/motion/reveal";
 import {
   getCategoryCardImage,
-  getCategoryTree,
   getFeaturedProducts,
+  getHomeCategoryTree,
   getNewProducts,
   getSliderItems,
 } from "@/lib/queries";
@@ -37,17 +37,15 @@ const PROCESS = [
 ];
 
 export default async function HomePage() {
-  const [slides, tree, featured, newArrivals] = await Promise.all([
+  const [slides, homeCategories, featured, newArrivals] = await Promise.all([
     getSliderItems(),
-    getCategoryTree(),
+    getHomeCategoryTree(),
     getFeaturedProducts(8),
     getNewProducts(6),
   ]);
 
-  const topCategories = tree.slice(0, 8);
-
   const categoryCards: CategoryCard[] = await Promise.all(
-    topCategories.map(async (top) => ({
+    homeCategories.map(async (top) => ({
       id: top.id,
       name: top.name,
       slug: top.slug,
@@ -67,21 +65,23 @@ export default async function HomePage() {
         {slides.length > 0 ? <Slider slides={slides} /> : <HeroFallback />}
       </section>
 
-      <Reveal className="mx-auto w-full max-w-7xl px-4">
-        <section className="mt-16 sm:mt-24" id="kategoriler">
-          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
-            <div>
-              <p className="eyebrow">Bölüm 01 — Koleksiyon</p>
-              <h2 className="mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-                Ürün Grupları
-              </h2>
+      {categoryCards.length > 0 ? (
+        <Reveal className="mx-auto w-full max-w-7xl px-4">
+          <section className="mt-16 sm:mt-24" id="kategoriler">
+            <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+              <div>
+                <p className="eyebrow">Bölüm 01 — Koleksiyon</p>
+                <h2 className="mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                  Ürün Grupları
+                </h2>
+              </div>
             </div>
-          </div>
-          <div className="mt-8">
-            <CategoryIndex categories={categoryCards} />
-          </div>
-        </section>
-      </Reveal>
+            <div className="mt-8">
+              <CategoryIndex categories={categoryCards} />
+            </div>
+          </section>
+        </Reveal>
+      ) : null}
 
       <Reveal className="mx-auto w-full max-w-7xl px-4">
         <section className="mt-20 sm:mt-28">

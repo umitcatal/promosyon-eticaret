@@ -17,6 +17,7 @@ export type CategoryAdminRow = {
   image_url: string | null;
   sort_order: number;
   active: number;
+  show_on_home: number;
   parent_name: string | null;
   product_count: number;
 };
@@ -24,14 +25,29 @@ export type CategoryAdminRow = {
 const fileInputClass =
   "block w-full text-sm text-zinc-600 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-zinc-700";
 
-export function CategoryForm({ category }: { category: CategoryAdminRow }) {
+export type CategoryOrderDraft = {
+  sortOrder: string;
+  showOnHome: boolean;
+};
+
+export function CategoryForm({
+  category,
+  draft,
+  onDraftChange,
+}: {
+  category: CategoryAdminRow;
+  draft?: CategoryOrderDraft;
+  onDraftChange: (patch: Partial<CategoryOrderDraft>) => void;
+}) {
   const [state, formAction, pending] = useActionState(updateCategoryAction, {});
 
   return (
     <CategoryFormFields
       category={category}
+      draft={draft}
       formAction={formAction}
       key={state.nonce ?? `category-${category.id}`}
+      onDraftChange={onDraftChange}
       pending={pending}
       state={state}
     />
@@ -40,12 +56,16 @@ export function CategoryForm({ category }: { category: CategoryAdminRow }) {
 
 function CategoryFormFields({
   category,
+  draft,
   formAction,
+  onDraftChange,
   pending,
   state,
 }: {
   category: CategoryAdminRow;
+  draft?: CategoryOrderDraft;
   formAction: (formData: FormData) => void;
+  onDraftChange: (patch: Partial<CategoryOrderDraft>) => void;
   pending: boolean;
   state: Awaited<ReturnType<typeof updateCategoryAction>>;
 }) {
@@ -72,7 +92,7 @@ function CategoryFormFields({
   return (
     <form
       action={formAction}
-      className="grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)_100px_90px_100px]"
+      className="grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)_90px_90px_110px_100px]"
     >
       <input name="categoryId" type="hidden" value={category.id} />
 
@@ -142,10 +162,11 @@ function CategoryFormFields({
         </label>
         <input
           className={inputClass}
-          defaultValue={category.sort_order}
           id={`category-sort-${category.id}`}
           name="sortOrder"
+          onChange={(event) => onDraftChange({ sortOrder: event.target.value })}
           type="number"
+          value={draft?.sortOrder ?? String(category.sort_order)}
         />
       </div>
 
@@ -159,6 +180,22 @@ function CategoryFormFields({
         Aktif
       </label>
 
+      <label
+        className="flex items-center gap-2 pt-6 text-sm font-medium text-zinc-700"
+        title="Ana sayfadaki Ürün Grupları bölümünde göster"
+      >
+        <input
+          checked={draft?.showOnHome ?? category.show_on_home === 1}
+          className="h-4 w-4 accent-orange-600"
+          name="showOnHome"
+          onChange={(event) =>
+            onDraftChange({ showOnHome: event.target.checked })
+          }
+          type="checkbox"
+        />
+        Ana sayfa
+      </label>
+
       <button
         className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60"
         disabled={pending}
@@ -168,7 +205,7 @@ function CategoryFormFields({
       </button>
 
       {state.error || (state.ok && state.message) ? (
-        <div className="lg:col-span-5">
+        <div className="lg:col-span-6">
           {state.error ? (
             <p className="text-sm font-medium text-red-600">{state.error}</p>
           ) : (

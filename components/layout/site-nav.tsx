@@ -25,6 +25,10 @@ function CategoryChildren({
     );
   }
 
+  const childCount = category.children.length;
+  const filler = (columns: number) =>
+    (columns - (childCount % columns)) % columns;
+
   return (
     <div className="mt-6 grid grid-cols-2 gap-px border-t border-line bg-line/60 pt-px sm:grid-cols-3 xl:grid-cols-4">
       {category.children.map((child) => (
@@ -54,6 +58,27 @@ function CategoryChildren({
             ) : null}
           </Link>
         </div>
+      ))}
+      {Array.from({ length: filler(2) }, (_, index) => (
+        <div
+          aria-hidden="true"
+          className="bg-paper sm:hidden"
+          key={`fill-2-${index}`}
+        />
+      ))}
+      {Array.from({ length: filler(3) }, (_, index) => (
+        <div
+          aria-hidden="true"
+          className="hidden bg-paper sm:block xl:hidden"
+          key={`fill-3-${index}`}
+        />
+      ))}
+      {Array.from({ length: filler(4) }, (_, index) => (
+        <div
+          aria-hidden="true"
+          className="hidden bg-paper xl:block"
+          key={`fill-4-${index}`}
+        />
       ))}
     </div>
   );

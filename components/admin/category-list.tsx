@@ -1,18 +1,22 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useActionState, useDeferredValue, useMemo, useState } from "react";
+import { updateCategoryBulkAction } from "@/app/actions/admin";
 import {
   CategoryForm,
   type CategoryAdminRow,
+  type CategoryOrderDraft,
 } from "@/components/admin/category-form";
 import {
   inputClass,
   labelClass,
+  primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui/styles";
 
 type StatusFilter = "all" | "active" | "passive";
 type ImageFilter = "all" | "missing" | "present";
+type HomeFilter = "all" | "shown" | "hidden";
 
 const TURKISH_FOLD: Record<string, string> = {
   ç: "c",
@@ -76,8 +80,57 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [image, setImage] = useState<ImageFilter>("all");
+  const [home, setHome] = useState<HomeFilter>("all");
   const [parent, setParent] = useState("all");
+  const [drafts, setDrafts] = useState<Record<number, CategoryOrderDraft>>({});
+  const [bulkState, bulkAction, bulkPending] = useActionState(
+    updateCategoryBulkAction,
+    {},
+  );
   const deferredQuery = useDeferredValue(query);
+
+  function updateDraft(
+    category: CategoryAdminRow,
+    patch: Partial<CategoryOrderDraft>,
+  ) {
+    setDrafts((prev) => {
+      const current = prev[category.id] ?? {
+        sortOrder: String(category.sort_order),
+        showOnHome: category.show_on_home === 1,
+      };
+      const next = { ...current, ...patch };
+      const dirty =
+        (Number(next.sortOrder) || 0) !== category.sort_order ||
+        next.showOnHome !== (category.show_on_home === 1);
+      const copy = { ...prev };
+      if (dirty) {
+        copy[category.id] = next;
+      } else {
+        delete copy[category.id];
+      }
+      return copy;
+    });
+  }
+
+  const dirtyDrafts = useMemo(() => {
+    return Object.entries(drafts).flatMap(([key, draft]) => {
+      const base = rows.find((row) => row.id === Number(key));
+      if (!base) return [];
+      const dirty =
+        (Number(draft.sortOrder) || 0) !== base.sort_order ||
+        draft.showOnHome !== (base.show_on_home === 1);
+      return dirty ? [{ id: base.id, draft }] : [];
+    });
+  }, [drafts, rows]);
+
+  const draftCount = dirtyDrafts.length;
+  const bulkPayload = JSON.stringify(
+    dirtyDrafts.map(({ id, draft }) => ({
+      id,
+      sortOrder: draft.sortOrder,
+      showOnHome: draft.showOnHome,
+    })),
+  );
 
   const parentOptions = useMemo(
     () => rows.filter((row) => row.parent_id === null),
@@ -91,6 +144,8 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
       if (status === "passive" && row.active !== 0) return false;
       if (image === "missing" && hasImage(row)) return false;
       if (image === "present" && !hasImage(row)) return false;
+      if (home === "shown" && row.show_on_home !== 1) return false;
+      if (home === "hidden" && row.show_on_home === 1) return false;
       if (parent === "root" && row.parent_id !== null) return false;
       if (
         parent !== "all" &&
@@ -104,15 +159,20 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
         .map(normalizeTr)
         .some((needle) => needle.includes(term));
     });
-  }, [deferredQuery, image, parent, rows, status]);
+  }, [deferredQuery, home, image, parent, rows, status]);
 
   const hasFilters =
-    query !== "" || status !== "all" || image !== "all" || parent !== "all";
+    query !== "" ||
+    status !== "all" ||
+    image !== "all" ||
+    home !== "all" ||
+    parent !== "all";
 
   function resetFilters() {
     setQuery("");
     setStatus("all");
     setImage("all");
+    setHome("all");
     setParent("all");
   }
 
@@ -121,8 +181,8 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
       <div>
         <h2 className="text-lg font-bold text-zinc-900">Kategoriler</h2>
         <p className="text-sm text-zinc-500">
-          Gösterilen {filtered.length} / {rows.length} kategori • Ana sayfada
-          gösterilecek kategori görselini buradan yükleyin
+          Gösterilen {filtered.length} / {rows.length} kategori • Ana sayfadaki
+          Ürün Grupları bölümünde gösterilecek kategorileri buradan seçin
         </p>
       </div>
 
@@ -164,6 +224,17 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
             value={image}
           />
 
+          <ChipGroup
+            label="Ana sayfa"
+            onChange={setHome}
+            options={[
+              { label: "Tümü", value: "all" },
+              { label: "Gösterilen", value: "shown" },
+              { label: "Gizli", value: "hidden" },
+            ]}
+            value={home}
+          />
+
           <div className="min-w-48">
             <label className={labelClass} htmlFor="category-filter-parent">
               Üst kategori
@@ -196,6 +267,43 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
         ) : null}
       </div>
 
+      <form
+        action={bulkAction}
+        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4"
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-zinc-900">Toplu kaydet</p>
+          <p className="text-xs text-zinc-500">
+            Sıra ve ana sayfa görünürlüğü değişikliklerini tek seferde kaydedin.
+          </p>
+          {bulkState.error ? (
+            <p className="mt-1 text-sm font-medium text-red-600">
+              {bulkState.error}
+            </p>
+          ) : null}
+          {bulkState.ok && bulkState.message ? (
+            <p className="mt-1 text-sm font-medium text-emerald-600">
+              {bulkState.message}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-zinc-500">
+            {draftCount > 0 ? `${draftCount} kategori değişti` : "Değişiklik yok"}
+          </span>
+          <button
+            className={`${primaryButtonClass} w-auto`}
+            disabled={bulkPending || draftCount === 0}
+            type="submit"
+          >
+            {bulkPending ? "Kaydediliyor..." : "Tümünü kaydet"}
+          </button>
+        </div>
+
+        <input name="updates" type="hidden" value={bulkPayload} />
+      </form>
+
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-300 bg-white px-6 py-16 text-center text-sm text-zinc-500">
           <p>Filtreye uyan kategori bulunmuyor.</p>
@@ -210,7 +318,12 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
       ) : (
         <div className="space-y-3">
           {filtered.map((row) => (
-            <CategoryForm category={row} key={row.id} />
+            <CategoryForm
+              category={row}
+              draft={drafts[row.id]}
+              key={row.id}
+              onDraftChange={(patch) => updateDraft(row, patch)}
+            />
           ))}
         </div>
       )}

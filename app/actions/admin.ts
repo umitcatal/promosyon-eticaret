@@ -129,6 +129,7 @@ export async function updateCategoryAction(
 
   const sortOrder = Number(formData.get("sortOrder") ?? 0) || 0;
   const active = formData.get("active") === "on" ? 1 : 0;
+  const showOnHome = formData.get("showOnHome") === "on" ? 1 : 0;
   const removeImage = formData.get("removeImage") === "on";
   const file = formData.get("image");
 
@@ -142,8 +143,8 @@ export async function updateCategoryAction(
     const imageUrl = newImage ?? (removeImage ? null : existing.image_url);
 
     db.prepare(
-      "UPDATE categories SET image_url = ?, sort_order = ?, active = ? WHERE id = ?"
-    ).run(imageUrl, sortOrder, active, categoryId);
+      "UPDATE categories SET image_url = ?, sort_order = ?, active = ?, show_on_home = ? WHERE id = ?"
+    ).run(imageUrl, sortOrder, active, showOnHome, categoryId);
 
     if (existing.image_url && existing.image_url !== imageUrl) {
       await deleteCategoryImage(existing.image_url);
@@ -159,6 +160,71 @@ export async function updateCategoryAction(
     if (newImage) await deleteCategoryImage(newImage);
     return { error: (error as Error).message };
   }
+}
+
+export async function updateCategoryBulkAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const raw = formData.get("updates");
+  if (typeof raw !== "string" || raw.trim() === "") {
+    return { error: "Güncellenecek kategori bulunamadı." };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { error: "Geçersiz veri gönderildi." };
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) {
+    return { error: "Güncellenecek kategori bulunamadı." };
+  }
+
+  const updates: { id: number; sortOrder: number; showOnHome: number }[] = [];
+  for (const item of parsed) {
+    const record = item as {
+      id?: unknown;
+      sortOrder?: unknown;
+      showOnHome?: unknown;
+    } | null;
+    const id = Number(record?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return { error: "Geçersiz kategori gönderildi." };
+    }
+    const sortOrder = Number(record?.sortOrder ?? 0) || 0;
+    if (!Number.isFinite(sortOrder)) {
+      return { error: "Geçersiz sıra değeri gönderildi." };
+    }
+    updates.push({
+      id,
+      sortOrder,
+      showOnHome: record?.showOnHome === true ? 1 : 0,
+    });
+  }
+
+  try {
+    const run = db.transaction(() => {
+      const update = db.prepare(
+        "UPDATE categories SET sort_order = ?, show_on_home = ? WHERE id = ?"
+      );
+      for (const updateRow of updates) {
+        update.run(updateRow.sortOrder, updateRow.showOnHome, updateRow.id);
+      }
+    });
+    run();
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
+  updateTag("catalog");
+  return {
+    ok: true,
+    message: `${updates.length} kategori güncellendi.`,
+    nonce: crypto.randomUUID(),
+  };
 }
 
 export async function saveSliderAction(

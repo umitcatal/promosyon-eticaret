@@ -6,6 +6,7 @@ export type Category = {
   image_url: string | null;
   sort_order: number;
   active: number;
+  show_on_home: number;
 };
 
 export type ProductRow = {
@@ -48,6 +49,11 @@ export type ProductListItem = ProductRow & {
 };
 
 export type CategoryNode = Category & { children: CategoryNode[] };
+
+export type CategoryTreeItem = Category & {
+  children: CategoryTreeItem[];
+  product_count: number;
+};
 
 export type SliderItem = {
   id: number;

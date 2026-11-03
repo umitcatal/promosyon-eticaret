@@ -233,3 +233,23 @@ body {
   font-size: inherit;
   padding: 0;
 }
+
+/* The catalog index scrolls on its own once expanded groups outgrow the viewport. */
+.catalog-sidebar {
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.catalog-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.catalog-sidebar::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+
+.catalog-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}

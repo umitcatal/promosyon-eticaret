@@ -31,6 +31,7 @@ db.exec(`
     image_url TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     active INTEGER NOT NULL DEFAULT 1,
+    show_on_home INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(parent_id, slug)
   );
@@ -146,18 +147,34 @@ db.exec(`
 `);
 
 function ensureColumn(
-  table: "orders" | "products" | "variants",
+  table: "categories" | "orders" | "products" | "variants",
   column: string,
   definition: string
-): void {
+): boolean {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all() as {
     name: string;
   }[];
-  if (!columns.some((info) => info.name === column)) {
-    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
-  }
+  if (columns.some((info) => info.name === column)) return false;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  return true;
 }
 
+const addedShowOnHome = ensureColumn(
+  "categories",
+  "show_on_home",
+  "INTEGER NOT NULL DEFAULT 0"
+);
+if (addedShowOnHome) {
+  db.exec(`
+    UPDATE categories SET show_on_home = 1
+    WHERE id IN (
+      SELECT id FROM categories
+      WHERE parent_id IS NULL AND active = 1
+      ORDER BY sort_order, name
+      LIMIT 8
+    )
+  `);
+}
 ensureColumn("products", "baski_fiyatlari", "TEXT");
 ensureColumn("variants", "net_price", "REAL");
 ensureColumn("variants", "discount", "REAL");

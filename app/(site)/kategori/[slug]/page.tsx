@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
@@ -7,10 +6,16 @@ import {
   CatalogHeading,
   type Crumb,
 } from "@/components/catalog/catalog-chrome";
+import { CategorySidebar } from "@/components/catalog/category-sidebar";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { SortSelect } from "@/components/catalog/sort-select";
-import { getCategoryBySlug, getProductsByCategorySlug } from "@/lib/queries";
+import {
+  getCategoryBySlug,
+  getCategorySidebarTree,
+  getProductsByCategorySlug,
+} from "@/lib/queries";
+import type { Category } from "@/lib/types";
 
 export async function generateMetadata({
   params,
@@ -44,61 +49,48 @@ function CategorySkeleton() {
   );
 }
 
+function CategoryPageSkeleton() {
+  return (
+    <div>
+      <div className="h-3 w-64 animate-pulse rounded-sm bg-surface" />
+      <div className="mt-7 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[16.5rem_minmax(0,1fr)] xl:gap-12">
+        <div className="mb-8 border-b-2 border-line pb-3 lg:mb-0">
+          <div className="h-3 w-32 animate-pulse rounded-sm bg-surface" />
+        </div>
+        <div className="min-w-0">
+          <CategorySkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 async function CategoryContent({
-  params,
+  category,
+  parent,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  category: Category;
+  parent: Category | null;
   searchParams: Promise<SearchParams>;
 }) {
-  const [{ slug }, query] = await Promise.all([params, searchParams]);
-  const data = await getCategoryBySlug(slug);
-  if (!data) notFound();
-
+  const query = await searchParams;
   const page = Number(query.sayfa ?? "1") || 1;
   const sort = query.sirala ?? "newest";
-  const products = await getProductsByCategorySlug(slug, { page, sort });
+  const products = await getProductsByCategorySlug(category.slug, { page, sort });
   if (!products) notFound();
 
-  const { category, parent, children } = data;
   const paginationQuery: Record<string, string> = {};
   if (sort !== "newest") paginationQuery.sirala = sort;
 
-  const crumbs: Crumb[] = [
-    { href: "/", label: "Ana Sayfa" },
-    ...(parent ? [{ href: `/kategori/${parent.slug}`, label: parent.name }] : []),
-    { label: category.name },
-  ];
-
   return (
     <div>
-      <Breadcrumb items={crumbs} />
-
-      <div className="mt-7">
-        <CatalogHeading
-          aside={<SortSelect value={sort} />}
-          eyebrow={parent ? parent.name : "Koleksiyon"}
-          meta={`${products.total} ürün · sayfa ${String(products.page).padStart(2, "0")}`}
-          title={category.name}
-        />
-      </div>
-
-      {children.length > 0 ? (
-        <div className="border-b border-line pb-7">
-          <p className="eyebrow">Alt gruplar</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {children.map((child) => (
-              <Link
-                className="rounded-sm border border-line bg-paper px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-ink hover:text-ink"
-                href={`/kategori/${child.slug}`}
-                key={child.id}
-              >
-                {child.name}
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <CatalogHeading
+        aside={<SortSelect value={sort} />}
+        eyebrow={parent ? parent.name : "Koleksiyon"}
+        meta={`${products.total} ürün · sayfa ${String(products.page).padStart(2, "0")}`}
+        title={category.name}
+      />
 
       <div className="mt-8">
         <ProductGrid products={products.items} />
@@ -115,11 +107,58 @@ async function CategoryContent({
   );
 }
 
-export default function CategoryPage(props: PageProps<"/kategori/[slug]">) {
+async function CategoryPageContent({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
+  const { slug } = await params;
+  const [data, sidebar] = await Promise.all([
+    getCategoryBySlug(slug),
+    getCategorySidebarTree(),
+  ]);
+  if (!data) notFound();
+
+  const { category, parent } = data;
+  const crumbs: Crumb[] = [
+    { href: "/", label: "Ana Sayfa" },
+    ...(parent ? [{ href: `/kategori/${parent.slug}`, label: parent.name }] : []),
+    { label: category.name },
+  ];
+
+  return (
+    <>
+      <Breadcrumb items={crumbs} />
+
+      <div className="mt-7 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-10 xl:grid-cols-[16.5rem_minmax(0,1fr)] xl:gap-12">
+        <CategorySidebar
+          activeSlug={category.slug}
+          nodes={sidebar.nodes}
+          total={sidebar.total}
+        />
+        <div className="min-w-0">
+          <Suspense fallback={<CategorySkeleton />}>
+            <CategoryContent
+              category={category}
+              parent={parent}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function CategoryPage(
+  props: PageProps<"/kategori/[slug]">
+) {
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:py-14">
-      <Suspense fallback={<CategorySkeleton />}>
-        <CategoryContent
+      <Suspense fallback={<CategoryPageSkeleton />}>
+        <CategoryPageContent
           params={props.params}
           searchParams={props.searchParams}
         />
