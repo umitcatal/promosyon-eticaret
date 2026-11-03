@@ -97,3 +97,67 @@ export type MenuNavItem = {
   href: string;
   open_in_new_tab: boolean;
 };
+
+export type HomeWidgetType =
+  | "slider"
+  | "categories"
+  | "featured_products"
+  | "process"
+  | "new_products"
+  | "banner";
+
+export type HomeWidgetBannerLayout = 1 | 2 | 3;
+
+export type HomeBannerAspect = "wide" | "standard" | "square";
+
+export type HomeProcessStep = {
+  title: string;
+  description: string;
+};
+
+export type HomeWidgetConfig = {
+  steps?: HomeProcessStep[];
+};
+
+export type HomeWidgetBanner = {
+  id: number;
+  widget_id: number;
+  image_url: string;
+  alt_text: string | null;
+  link: string | null;
+  open_in_new_tab: number;
+  sort_order: number;
+  active: number;
+};
+
+export type HomeWidget = {
+  id: number;
+  type: HomeWidgetType;
+  eyebrow: string | null;
+  title: string | null;
+  subtitle: string | null;
+  link: string | null;
+  link_label: string | null;
+  banner_layout: HomeWidgetBannerLayout;
+  aspect: HomeBannerAspect;
+  item_limit: number;
+  config: HomeWidgetConfig;
+  sort_order: number;
+  active: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type HomeWidgetWithBanners = HomeWidget & {
+  banners: HomeWidgetBanner[];
+};
+
+export type HomeWidgetRow = Omit<
+  HomeWidget,
+  "type" | "banner_layout" | "aspect" | "config"
+> & {
+  type: string;
+  banner_layout: number;
+  aspect: string;
+  config: string;
+};

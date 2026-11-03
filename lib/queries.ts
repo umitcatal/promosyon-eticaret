@@ -1,9 +1,19 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { db, getSetting } from "./db";
+import {
+  clampItemLimit,
+  isBannerAspect,
+  isBannerLayout,
+  isHomeWidgetType,
+  parseHomeWidgetConfig,
+} from "./home-widgets";
 import type {
   Category,
   CategoryNode,
   CategoryTreeItem,
+  HomeWidgetBanner,
+  HomeWidgetRow,
+  HomeWidgetWithBanners,
   MenuItem,
   MenuNavItem,
   Page,
@@ -552,6 +562,64 @@ export async function getSliderItems(): Promise<SliderItem[]> {
       "SELECT * FROM slider WHERE active = 1 ORDER BY sort_order, id LIMIT 8"
     )
     .all() as SliderItem[];
+}
+
+export function fetchHomeWidgets(
+  options: { activeOnly?: boolean } = {}
+): HomeWidgetWithBanners[] {
+  const activeOnly = options.activeOnly ?? false;
+
+  const rows = db
+    .prepare(
+      `SELECT * FROM home_widgets${activeOnly ? " WHERE active = 1" : ""}
+       ORDER BY sort_order, id`
+    )
+    .all() as HomeWidgetRow[];
+
+  if (rows.length === 0) return [];
+
+  const ids = rows.map((row) => row.id);
+  const placeholders = ids.map(() => "?").join(", ");
+  const banners = db
+    .prepare(
+      `SELECT * FROM home_widget_banners
+       WHERE widget_id IN (${placeholders})${activeOnly ? " AND active = 1" : ""}
+       ORDER BY sort_order, id`
+    )
+    .all(...ids) as HomeWidgetBanner[];
+
+  const grouped = new Map<number, HomeWidgetBanner[]>();
+  for (const banner of banners) {
+    const list = grouped.get(banner.widget_id);
+    if (list) list.push(banner);
+    else grouped.set(banner.widget_id, [banner]);
+  }
+
+  const widgets: HomeWidgetWithBanners[] = [];
+  for (const row of rows) {
+    if (!isHomeWidgetType(row.type)) continue;
+    widgets.push({
+      ...row,
+      type: row.type,
+      banner_layout: isBannerLayout(row.banner_layout)
+        ? row.banner_layout
+        : 1,
+      aspect: isBannerAspect(row.aspect) ? row.aspect : "wide",
+      item_limit: clampItemLimit(row.item_limit, 0, 0, 24),
+      config: parseHomeWidgetConfig(row.config),
+      banners: grouped.get(row.id) ?? [],
+    });
+  }
+
+  return widgets;
+}
+
+export async function getHomeWidgets(): Promise<HomeWidgetWithBanners[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("homepage");
+
+  return fetchHomeWidgets({ activeOnly: true });
 }
 
 export async function getCategoryCardImage(

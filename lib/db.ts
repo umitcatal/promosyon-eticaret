@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { DEFAULT_PROCESS_STEPS } from "./home-widgets";
 
 const dbPath =
   process.env.DB_PATH ?? path.join(process.cwd(), "data", "promosyon.db");
@@ -144,6 +145,39 @@ db.exec(`
     active INTEGER NOT NULL DEFAULT 1
   );
   CREATE INDEX IF NOT EXISTS idx_menu_items_order ON menu_items(sort_order, id);
+
+  CREATE TABLE IF NOT EXISTS home_widgets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    eyebrow TEXT,
+    title TEXT,
+    subtitle TEXT,
+    link TEXT,
+    link_label TEXT,
+    banner_layout INTEGER NOT NULL DEFAULT 1,
+    aspect TEXT NOT NULL DEFAULT 'wide',
+    item_limit INTEGER NOT NULL DEFAULT 0,
+    config TEXT NOT NULL DEFAULT '{}',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_home_widgets_order
+  ON home_widgets(sort_order, id);
+
+  CREATE TABLE IF NOT EXISTS home_widget_banners (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    widget_id INTEGER NOT NULL REFERENCES home_widgets(id) ON DELETE CASCADE,
+    image_url TEXT NOT NULL,
+    alt_text TEXT,
+    link TEXT,
+    open_in_new_tab INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1
+  );
+  CREATE INDEX IF NOT EXISTS idx_home_widget_banners_widget
+  ON home_widget_banners(widget_id, sort_order, id);
 `);
 
 function ensureColumn(
@@ -200,3 +234,83 @@ export function setSetting(key: string, value: string): void {
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
   ).run(key, value);
 }
+
+const HOME_WIDGETS_SEED_KEY = "home_widgets_seeded";
+
+function seedHomeWidgets(): void {
+  if (getSetting(HOME_WIDGETS_SEED_KEY) === "1") return;
+
+  const { total } = db
+    .prepare("SELECT COUNT(*) AS total FROM home_widgets")
+    .get() as { total: number };
+
+  if (total > 0) {
+    setSetting(HOME_WIDGETS_SEED_KEY, "1");
+    return;
+  }
+
+  const insert = db.prepare(
+    `INSERT INTO home_widgets
+       (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  db.transaction(() => {
+    insert.run("slider", null, null, null, null, null, 1, "wide", 8, "{}", 0);
+    insert.run(
+      "categories",
+      "Bölüm 01 — Koleksiyon",
+      "Ürün Grupları",
+      null,
+      null,
+      null,
+      1,
+      "wide",
+      0,
+      "{}",
+      1
+    );
+    insert.run(
+      "featured_products",
+      "Bölüm 02 — Seçki",
+      "Öne Çıkan Ürünler",
+      null,
+      "/urunler",
+      "Tüm Ürünler",
+      1,
+      "wide",
+      8,
+      "{}",
+      2
+    );
+    insert.run(
+      "process",
+      "Nasıl çalışır",
+      "Tekliften\n*teslime*\ntemiz bir süreç.",
+      null,
+      null,
+      null,
+      1,
+      "wide",
+      0,
+      JSON.stringify({ steps: DEFAULT_PROCESS_STEPS }),
+      3
+    );
+    insert.run(
+      "new_products",
+      "Bölüm 03 — Stok",
+      "Yeni Gelenler",
+      "Kataloğa eklenen son ürünler. Fiyatlar teklif bazlıdır; ürün kodunu belirterek ekibimizden fiyat isteyebilirsiniz.",
+      null,
+      null,
+      1,
+      "wide",
+      6,
+      "{}",
+      4
+    );
+    setSetting(HOME_WIDGETS_SEED_KEY, "1");
+  })();
+}
+
+seedHomeWidgets();

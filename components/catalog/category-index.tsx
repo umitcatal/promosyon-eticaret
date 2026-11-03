@@ -25,19 +25,13 @@ export function CategoryIndex({ categories }: { categories: CategoryCard[] }) {
             <div className="relative aspect-square w-full overflow-hidden bg-surface transition-colors duration-500 group-hover:bg-surface/70">
               <span
                 aria-hidden="true"
-                className="absolute left-4 top-4 z-10 font-mono text-[10px] tracking-[0.2em] text-brass-700/70"
-              >
-                {ordinal(position)}
-              </span>
-              <span
-                aria-hidden="true"
-                className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-full border border-line-strong bg-paper/90 text-[12px] text-ink-muted backdrop-blur-sm transition-all duration-300 ease-out group-hover:border-brand-600 group-hover:bg-brand-600 group-hover:text-paper"
+                className="absolute right-2 top-2 z-10 grid size-8 place-items-center rounded-full border border-line-strong bg-paper/90 text-[12px] text-ink-muted backdrop-blur-sm transition-all duration-300 ease-out group-hover:border-brand-600 group-hover:bg-brand-600 group-hover:text-paper"
               >
                 →
               </span>
               <ProductImage
                 alt={category.name}
-                className="object-contain p-6 mix-blend-multiply transition-transform duration-[900ms] ease-out group-hover:scale-[1.05]"
+                className="object-contain p-4 mix-blend-multiply transition-transform duration-[900ms] ease-out group-hover:scale-[1.05]"
                 sizes="(max-width: 1023px) 50vw, 25vw"
                 src={category.image}
                 unoptimized={category.image?.startsWith("http")}

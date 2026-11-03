@@ -38,6 +38,11 @@ const LOGO_BUCKET: UploadBucket = {
   prefix: "/uploads/logo/",
 };
 
+const BANNER_BUCKET: UploadBucket = {
+  dir: path.join(UPLOAD_ROOT, "banners"),
+  prefix: "/uploads/banners/",
+};
+
 async function saveImage(file: File, bucket: UploadBucket): Promise<string> {
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("Lütfen bir görsel seçin.");
@@ -94,4 +99,12 @@ export function saveLogoImage(file: File): Promise<string> {
 
 export function deleteLogoImage(url: string | null): Promise<void> {
   return deleteImage(url, LOGO_BUCKET);
+}
+
+export function saveHomeBannerImage(file: File): Promise<string> {
+  return saveImage(file, BANNER_BUCKET);
+}
+
+export function deleteHomeBannerImage(url: string | null): Promise<void> {
+  return deleteImage(url, BANNER_BUCKET);
 }

@@ -22,7 +22,13 @@ const FRAME_CLASS =
   "relative aspect-[1.6/1] w-full overflow-hidden bg-ink sm:aspect-[2.78/1]";
 const IMAGE_CLASS = "object-cover object-left sm:object-center";
 
-export function Slider({ slides }: { slides: Slide[] }) {
+export function Slider({
+  slides,
+  eyebrow,
+}: {
+  slides: Slide[];
+  eyebrow?: string | null;
+}) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [failedSlides, setFailedSlides] = useState<number[]>([]);
@@ -115,7 +121,9 @@ export function Slider({ slides }: { slides: Slide[] }) {
               key={current.id}
               transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             >
-              <span className="eyebrow text-brass-300">Kurumsal Promosyon</span>
+              <span className="eyebrow text-brass-300">
+                {eyebrow?.trim() || "Kurumsal Promosyon"}
+              </span>
               {current.title ? (
                 <h2 className="mt-3 max-w-2xl font-display text-[1.75rem] leading-[1.05] font-semibold text-paper sm:text-4xl lg:text-[3.25rem]">
                   {current.title}
