@@ -3,6 +3,8 @@ import { DeletePageForm } from "@/components/admin/delete-page-form";
 import { db } from "@/lib/db";
 import type { Page } from "@/lib/types";
 
+export const instant = false;
+
 export const metadata = {
   title: "Sayfalar",
 };

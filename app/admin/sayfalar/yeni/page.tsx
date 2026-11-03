@@ -1,5 +1,7 @@
 import { PageForm } from "@/components/admin/page-form";
 
+export const instant = false;
+
 export const metadata = {
   title: "Yeni Sayfa",
 };

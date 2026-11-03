@@ -3,6 +3,8 @@ import { Pagination } from "@/components/catalog/pagination";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
 
+export const instant = false;
+
 export const metadata = {
   title: "Ürünler",
 };
