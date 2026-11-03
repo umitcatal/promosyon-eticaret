@@ -96,9 +96,11 @@ export async function Header() {
         </div>
       </div>
 
-      <div className="lg:hidden" data-collapse>
-        <div>
-          <SearchForm className="mx-auto max-w-7xl px-4 pb-3" />
+      <div className="lg:hidden">
+        <div data-collapse>
+          <div>
+            <SearchForm className="mx-auto max-w-7xl px-4 pb-3" />
+          </div>
         </div>
       </div>
 
