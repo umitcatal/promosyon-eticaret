@@ -20,6 +20,7 @@ globalForDb.__promosyonDb = db;
 
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
+db.pragma("busy_timeout = 5000");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS categories (
@@ -83,6 +84,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id),
+    idempotency_key TEXT,
     status TEXT NOT NULL DEFAULT 'yeni',
     note TEXT,
     total REAL,
@@ -90,6 +92,7 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_orders_user_created ON orders(user_id, created_at);
 
   CREATE TABLE IF NOT EXISTS order_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,7 +146,7 @@ db.exec(`
 `);
 
 function ensureColumn(
-  table: "products" | "variants",
+  table: "orders" | "products" | "variants",
   column: string,
   definition: string
 ): void {
@@ -159,6 +162,13 @@ ensureColumn("products", "baski_fiyatlari", "TEXT");
 ensureColumn("variants", "net_price", "REAL");
 ensureColumn("variants", "discount", "REAL");
 ensureColumn("variants", "stock", "INTEGER");
+ensureColumn("orders", "idempotency_key", "TEXT");
+
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_user_idempotency
+  ON orders(user_id, idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+`);
 
 export function getSetting(key: string): string | null {
   const row = db

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { endSession, startSession } from "@/lib/session";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { safeNextPath } from "@/lib/url";
 import { createUser, findUserByEmail } from "@/lib/users";
 
@@ -19,6 +20,10 @@ const signupSchema = z.object({
     .min(10, "Geçerli bir telefon numarası girin")
     .max(20, "Telefon numarası çok uzun"),
   password: z.string().min(8, "Şifre en az 8 karakter olmalı"),
+  turnstileToken: z
+    .string()
+    .min(1, "Güvenlik doğrulamasını tamamlayın")
+    .max(2048, "Güvenlik doğrulaması geçersiz"),
 });
 
 const loginSchema = z.object({
@@ -36,12 +41,18 @@ export async function signupAction(
     email: formData.get("email"),
     phone: formData.get("phone"),
     password: formData.get("password"),
+    turnstileToken: formData.get("cf-turnstile-response"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formu kontrol edin" };
   }
 
-  const { firstName, lastName, email, phone, password } = parsed.data;
+  const { firstName, lastName, email, phone, password, turnstileToken } =
+    parsed.data;
+  if (!(await verifyTurnstile(turnstileToken, "signup"))) {
+    return { error: "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin." };
+  }
+
   if (findUserByEmail(email)) {
     return { error: "Bu e-posta ile kayıtlı bir hesap zaten var" };
   }

@@ -1,9 +1,10 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import {
   removeCartItemAction,
   updateCartItemAction,
 } from "@/app/actions/cart";
-import { createOrderAction } from "@/app/actions/orders";
+import { CheckoutForm } from "@/components/cart/checkout-form";
 import { ProductImage } from "@/components/catalog/product-image";
 import { firstImage, formatPrice } from "@/lib/format";
 import { getCart } from "@/lib/cart";
@@ -236,48 +237,10 @@ export default async function CartPage() {
             ) : null}
           </dl>
 
-          <form action={createOrderAction} className="mt-5 space-y-3">
-            <div>
-              <label
-                className="mb-1 block text-sm font-medium text-zinc-700"
-                htmlFor="note"
-              >
-                Sipariş notu (opsiyonel)
-              </label>
-              <textarea
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-orange-500"
-                id="note"
-                name="note"
-                placeholder="Logo baskı, teslimat veya fatura notlarınız..."
-                rows={3}
-              />
-            </div>
-            <button
-              className="inline-flex w-full items-center justify-center rounded-lg bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-700"
-              type="submit"
-            >
-              {user ? "Siparişi Tamamla" : "Giriş Yap ve Siparişi Tamamla"}
-            </button>
-            {!user ? (
-              <p className="text-xs leading-5 text-zinc-500">
-                Siparişi tamamlamak için{" "}
-                <Link
-                  className="font-semibold text-orange-600"
-                  href="/giris?next=%2Fsepet"
-                >
-                  giriş yapın
-                </Link>{" "}
-                veya{" "}
-                <Link
-                  className="font-semibold text-orange-600"
-                  href="/kayit?next=%2Fsepet"
-                >
-                  üye olun
-                </Link>
-                .
-              </p>
-            ) : null}
-          </form>
+          <CheckoutForm
+            idempotencyKey={randomUUID()}
+            isAuthenticated={Boolean(user)}
+          />
 
           <p className="mt-4 border-t border-zinc-100 pt-4 text-xs leading-5 text-zinc-500">
             Siparişiniz kurumsal teklif olarak alınır; ödeme ve teslimat

@@ -62,7 +62,8 @@ npm run dev
 | Değişken | Açıklama |
 | --- | --- |
 | `SESSION_PASSWORD` | iron-session şifreleme anahtarı (en az 32 karakter) |
-| `NEXT_PUBLIC_SITE_URL` | Sitenin tam adresi (metadata, sitemap) |
+| `NEXT_PUBLIC_SITE_URL` | Sitenin tam adresi (metadata, sitemap, Turnstile hostname kontrolü) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile kayıt doğrulaması |
 | `DB_PATH` | SQLite dosya yolu (varsayılan `./data/promosyon.db`) |
 | `PRODUCT_XML_URL` | Ürün/kategori XML adresi (yalnızca sunucudan çekilebilir) |
 | `PRODUCT_XML_PATH` | XML dosyasının kaydedilip okunacağı yol (varsayılan `./data/xml/urunler.xml`) |
@@ -71,6 +72,10 @@ npm run dev
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google ile giriş (boşsa buton gizlenir) |
 | `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/google/callback` |
 | `ADMIN_*` | `npm run db:admin` için varsayılan admin bilgileri |
+
+Cloudflare Turnstile widget’ında sitenin hostname’ini (yerel geliştirme için
+gerekirse `localhost`) izinli alan adlarına ekleyin. `NEXT_PUBLIC_SITE_URL`
+aynı hostname’i içermelidir; secret key yalnızca sunucu ortamında tutulmalıdır.
 
 ## Google ile Giriş
 

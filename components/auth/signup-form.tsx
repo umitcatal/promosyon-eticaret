@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useCallback, useState } from "react";
 import { signupAction, type AuthFormState } from "@/app/actions/auth";
+import { Turnstile } from "@/components/auth/turnstile";
 import {
   errorTextClass,
   inputClass,
@@ -16,14 +17,23 @@ const initialState: AuthFormState = {};
 export function SignupForm({
   next,
   googleEnabled,
+  turnstileSiteKey,
 }: {
   next: string;
   googleEnabled: boolean;
+  turnstileSiteKey: string;
 }) {
   const [state, formAction, pending] = useActionState(
     signupAction,
     initialState
   );
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileError, setTurnstileError] = useState(
+    turnstileSiteKey ? "" : "Güvenlik doğrulaması şu anda kullanılamıyor."
+  );
+  const handleTokenChange = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
   const nextParam = encodeURIComponent(next);
 
   return (
@@ -98,8 +108,22 @@ export function SignupForm({
           />
           <p className="mt-1 text-xs text-zinc-500">En az 8 karakter.</p>
         </div>
-        {state.error ? <p className={errorTextClass}>{state.error}</p> : null}
-        <button className={primaryButtonClass} disabled={pending} type="submit">
+        {turnstileSiteKey ? (
+          <Turnstile
+            siteKey={turnstileSiteKey}
+            resetKey={state}
+            onTokenChange={handleTokenChange}
+            onError={setTurnstileError}
+          />
+        ) : null}
+        {state.error || turnstileError ? (
+          <p className={errorTextClass}>{state.error || turnstileError}</p>
+        ) : null}
+        <button
+          className={primaryButtonClass}
+          disabled={pending || !turnstileToken}
+          type="submit"
+        >
           {pending ? "Hesap oluşturuluyor..." : "Üye Ol"}
         </button>
       </form>

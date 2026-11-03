@@ -32,7 +32,11 @@ export default async function SignupPage({
           </h1>
         </div>
         <div className={cardClass}>
-          <SignupForm googleEnabled={googleEnabled} next={next} />
+          <SignupForm
+            googleEnabled={googleEnabled}
+            next={next}
+            turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
+          />
         </div>
       </div>
     </div>
