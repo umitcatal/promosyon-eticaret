@@ -9,69 +9,102 @@ async function getCopyrightYear(): Promise<number> {
   return new Date().getFullYear();
 }
 
+function ColumnLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass-300">
+      {children}
+    </p>
+  );
+}
+
 export async function Footer() {
   const tree = await getCategoryTree();
   const year = await getCopyrightYear();
 
   return (
-    <footer className="mt-16 border-t border-zinc-200 bg-zinc-900 text-zinc-300">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:grid-cols-4">
-        <div className="md:col-span-2">
-          <SiteLogo href={null} tone="dark" />
-          <p className="mt-3 max-w-md text-sm leading-6 text-zinc-400">
-            Kurumsal promosyon ürünlerinde kalem, çanta, teknoloji ve daha
-            fazlası. Şirket logonuzla özelleştirilebilen binlerce ürün çeşidi.
-          </p>
-        </div>
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-white">
-            Kategoriler
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {tree.slice(0, 8).map((top) => (
-              <li key={top.id}>
+    <footer className="mt-24 bg-ink text-paper/70">
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="grid gap-10 border-b border-paper/10 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-12">
+          <div>
+            <SiteLogo href={null} tone="dark" />
+            <p className="mt-5 max-w-xs text-sm leading-7 text-paper/55">
+              Kurumsal promosyon ürünlerinde kalem, çanta, teknoloji ve daha
+              fazlası. Şirket logonuzla özelleştirilebilen binlerce ürün çeşidi.
+            </p>
+          </div>
+
+          <div>
+            <ColumnLabel>Koleksiyon</ColumnLabel>
+            <ul className="mt-5 space-y-2.5 text-sm">
+              {tree.slice(0, 8).map((top) => (
+                <li key={top.id}>
+                  <Link
+                    className="text-paper/65 transition-colors hover:text-brass-200"
+                    href={`/kategori/${top.slug}`}
+                  >
+                    {top.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <ColumnLabel>Hesap</ColumnLabel>
+            <ul className="mt-5 space-y-2.5 text-sm">
+              <li>
                 <Link
-                  className="transition hover:text-orange-400"
-                  href={`/kategori/${top.slug}`}
+                  className="text-paper/65 transition-colors hover:text-brass-200"
+                  href="/giris"
                 >
-                  {top.name}
+                  Giriş Yap
                 </Link>
               </li>
-            ))}
-          </ul>
+              <li>
+                <Link
+                  className="text-paper/65 transition-colors hover:text-brass-200"
+                  href="/kayit"
+                >
+                  Üye Ol
+                </Link>
+              </li>
+              <li>
+                <Link
+                  className="text-paper/65 transition-colors hover:text-brass-200"
+                  href="/hesabim"
+                >
+                  Hesabım
+                </Link>
+              </li>
+              <li>
+                <Link
+                  className="text-paper/65 transition-colors hover:text-brass-200"
+                  href="/sepet"
+                >
+                  Sepetim
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="lg:pl-8">
+            <ColumnLabel>Teklif</ColumnLabel>
+            <p className="mt-5 font-display text-xl leading-snug font-semibold text-paper">
+              Liste fiyatımız yok; size özel fiyat veriyoruz.
+            </p>
+            <Link
+              className="mt-6 inline-flex items-center gap-3 rounded-sm bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-brass-200"
+              href="/urunler"
+            >
+              Ürünleri görüntüleyin
+              <span aria-hidden="true">→</span>
+            </Link>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-white">
-            Hesap
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            <li>
-              <Link className="transition hover:text-orange-400" href="/giris">
-                Giriş Yap
-              </Link>
-            </li>
-            <li>
-              <Link className="transition hover:text-orange-400" href="/kayit">
-                Üye Ol
-              </Link>
-            </li>
-            <li>
-              <Link className="transition hover:text-orange-400" href="/hesabim">
-                Hesabım
-              </Link>
-            </li>
-            <li>
-              <Link className="transition hover:text-orange-400" href="/sepet">
-                Sepetim
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-      <div className="border-t border-zinc-800">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-zinc-500 sm:flex-row">
-          <p>© {year} Promosyon Eticaret. Tüm hakları saklıdır.</p>
-          <p>Fiyatlar teklif bazlıdır; sipariş sonrası tarafımızca iletilir.</p>
+
+        <div className="flex flex-col items-start justify-between gap-3 py-6 font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40 sm:flex-row sm:items-center">
+          <p>© {year} Promosyon Eticaret</p>
+          <p>Fiyatlar teklif bazlıdır; sipariş sonrası iletilir.</p>
         </div>
       </div>
     </footer>

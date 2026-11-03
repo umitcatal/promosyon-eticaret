@@ -1,14 +1,15 @@
 import { Suspense } from "react";
+import { CatalogHeading } from "@/components/catalog/catalog-chrome";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { searchProducts } from "@/lib/queries";
 
 function SearchSkeleton() {
   return (
-    <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {Array.from({ length: 8 }).map((_, index) => (
         <div
-          className="aspect-[3/4] animate-pulse rounded-2xl bg-zinc-100"
+          className="aspect-[3/4] animate-pulse rounded-sm border border-line bg-surface/60"
           key={index}
         />
       ))}
@@ -25,21 +26,23 @@ async function SearchContent({
   const q = typeof query.q === "string" ? query.q : "";
   const page = Number(query.sayfa ?? "1") || 1;
   const results = await searchProducts(q, { page });
+  const searching = q.trim().length >= 2;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-        {q ? `"${q}" için arama sonuçları` : "Ürün Ara"}
-      </h1>
-      <p className="mt-1 text-sm text-zinc-500">
-        {q.trim().length < 2
-          ? "Aramak için en az 2 karakter yazın."
-          : `${results.total} ürün bulundu`}
-      </p>
+      <CatalogHeading
+        eyebrow="Arama"
+        meta={
+          searching
+            ? `${results.total} sonuç · sayfa ${String(results.page).padStart(2, "0")}`
+            : "en az 2 karakter"
+        }
+        title={searching ? `\u201C${q.trim()}\u201D` : "Ürün Ara"}
+      />
 
-      {q.trim().length >= 2 ? (
+      {searching ? (
         <>
-          <div className="mt-6">
+          <div className="mt-8">
             <ProductGrid products={results.items} />
           </div>
           <Pagination
@@ -50,14 +53,19 @@ async function SearchContent({
             total={results.total}
           />
         </>
-      ) : null}
+      ) : (
+        <p className="mt-8 max-w-lg text-sm leading-7 text-ink-muted">
+          Ürün adı, kategori veya ürün kodu ile arayabilirsiniz. Aramanız
+          bulunduğunuz kategorideki tüm alt grupları kapsar.
+        </p>
+      )}
     </div>
   );
 }
 
 export default function SearchPage(props: PageProps<"/arama">) {
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:py-14">
       <Suspense fallback={<SearchSkeleton />}>
         <SearchContent searchParams={props.searchParams} />
       </Suspense>

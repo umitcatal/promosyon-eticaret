@@ -8,14 +8,15 @@ export async function CartLink() {
   return (
     <Link
       aria-label="Sepetim"
-      className="relative flex h-10 w-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 transition hover:border-orange-300 hover:text-orange-600"
+      className="relative flex size-9 items-center justify-center rounded-sm border border-line text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700"
       href="/sepet"
     >
       <svg
-        className="h-5 w-5"
+        aria-hidden="true"
+        className="size-[18px]"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.4"
         viewBox="0 0 24 24"
       >
         <path
@@ -27,7 +28,7 @@ export async function CartLink() {
         <circle cx="17" cy="20" r="1.4" />
       </svg>
       {count > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-600 px-1 text-[11px] font-bold text-white">
+        <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-sm bg-brand-600 px-1 font-mono text-[10px] font-semibold text-paper">
           {count}
         </span>
       ) : null}

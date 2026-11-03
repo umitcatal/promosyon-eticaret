@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { CartLink } from "./cart-link";
+import { ScrollHeaderFrame } from "./scroll-header-frame";
 import { SiteLogo } from "./site-logo";
 import { SiteNav } from "./site-nav";
 import { UserMenu } from "./user-menu";
@@ -13,30 +14,25 @@ import type { MenuNavItem } from "@/lib/types";
 function SearchForm({ className }: { className?: string }) {
   return (
     <form action="/arama" className={className} method="GET" role="search">
-      <div className="relative">
+      <div className="group relative flex items-center">
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute left-0 size-4 text-ink-muted transition-colors group-focus-within:text-brand-600"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          viewBox="0 0 24 24"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+        </svg>
         <input
           aria-label="Ürün ara"
-          className="w-full rounded-full border border-zinc-300 bg-zinc-50 py-2 pl-4 pr-11 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-500/20"
+          className="w-full border-b border-line-strong bg-transparent py-1.5 pl-7 pr-3 font-display text-[15px] text-ink outline-none transition-colors placeholder:text-ink-muted/70 group-focus-within:border-brand-600"
           name="q"
-          placeholder="Ürün, kategori veya ürün kodu ara..."
+          placeholder="Ürün, kategori veya kod ara"
           type="search"
         />
-        <button
-          aria-label="Ara"
-          className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 transition hover:bg-orange-50 hover:text-orange-600"
-          type="submit"
-        >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-          </svg>
-        </button>
       </div>
     </form>
   );
@@ -44,9 +40,9 @@ function SearchForm({ className }: { className?: string }) {
 
 function UserMenuFallback() {
   return (
-    <div className="flex items-center gap-2">
-      <span className="h-9 w-16 animate-pulse rounded-full bg-zinc-100" />
-      <span className="hidden h-9 w-20 animate-pulse rounded-full bg-zinc-100 sm:block" />
+    <div className="flex items-center gap-3">
+      <span className="h-8 w-20 animate-pulse rounded-sm bg-line/70" />
+      <span className="h-8 w-8 animate-pulse rounded-sm bg-line/70" />
     </div>
   );
 }
@@ -71,31 +67,42 @@ export async function Header() {
         ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
-        <SiteLogo />
-        <div className="hidden flex-1 md:block">
-          <SearchForm />
+    <ScrollHeaderFrame>
+      <div data-collapse>
+        <div>
+          <div className="border-b border-line/80">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
+              <span>Fiyatlar teklif bazlıdır</span>
+              <span className="hidden sm:block">
+                Kurumsal baskı · Geniş ürün yelpazesi
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
+      </div>
+
+      <div className="site-header-bar mx-auto flex max-w-7xl items-center gap-5 px-4 py-4 sm:gap-8">
+        <SiteLogo />
+        <SearchForm className="hidden flex-1 lg:block" />
+        <div className="ml-auto flex items-center gap-3 sm:gap-4">
           <Suspense fallback={<UserMenuFallback />}>
             <UserMenu />
           </Suspense>
           <Suspense
-            fallback={
-              <span className="h-10 w-10 animate-pulse rounded-full bg-zinc-100" />
-            }
+            fallback={<span className="size-9 animate-pulse rounded-sm bg-line/70" />}
           >
             <CartLink />
           </Suspense>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-3 md:hidden">
-        <SearchForm />
+      <div className="lg:hidden" data-collapse>
+        <div>
+          <SearchForm className="mx-auto max-w-7xl px-4 pb-3" />
+        </div>
       </div>
 
       <SiteNav categories={tree} items={navItems} />
-    </header>
+    </ScrollHeaderFrame>
   );
 }

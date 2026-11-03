@@ -7,18 +7,18 @@ export async function UserMenu() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4">
         <Link
-          className="rounded-full px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:text-orange-600"
+          className="border-b border-transparent pb-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
           href="/giris"
         >
-          Giriş Yap
+          Giriş
         </Link>
         <Link
-          className="rounded-full bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700"
+          className="rounded-sm bg-brand-600 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-paper transition-colors hover:bg-brand-700"
           href="/kayit"
         >
-          Üye Ol
+          Teklif Al
         </Link>
       </div>
     );
@@ -26,45 +26,48 @@ export async function UserMenu() {
 
   return (
     <details className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-zinc-200 px-3 py-2 text-sm font-semibold text-zinc-700 transition hover:border-orange-300 hover:text-orange-600">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-100 text-xs font-bold text-orange-700">
+      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-sm border border-line px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted transition-colors hover:border-line-strong hover:text-ink">
+        <span className="flex size-6 items-center justify-center rounded-sm bg-brand-600 font-display text-xs font-semibold text-paper">
           {user.firstName.charAt(0).toUpperCase()}
         </span>
         <span className="hidden max-w-28 truncate sm:block">
           {user.firstName}
         </span>
         <svg
-          className="h-3 w-3 text-zinc-400"
+          aria-hidden="true"
+          className="size-3 transition-transform group-open:rotate-180"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.5"
           viewBox="0 0 24 24"
         >
           <path d="m6 9 6 6 6-6" strokeLinecap="round" />
         </svg>
       </summary>
-      <div className="absolute right-0 top-full z-50 mt-1 w-52 rounded-xl border border-zinc-200 bg-white p-2 shadow-lg">
-        <div className="border-b border-zinc-100 px-3 py-2">
-          <p className="truncate text-sm font-semibold text-zinc-900">
+      <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-sm border border-line-strong bg-paper p-1.5 shadow-[0_24px_50px_-32px_rgba(20,19,15,0.5)]">
+        <div className="border-b border-line px-3 py-2.5">
+          <p className="truncate font-display text-sm font-semibold text-ink">
             {user.firstName} {user.lastName}
           </p>
-          <p className="truncate text-xs text-zinc-500">{user.email}</p>
+          <p className="truncate font-mono text-[10px] tracking-wide text-ink-muted">
+            {user.email}
+          </p>
         </div>
         <Link
-          className="mt-1 block rounded-lg px-3 py-2 text-sm text-zinc-700 transition hover:bg-orange-50 hover:text-orange-700"
+          className="mt-1 block rounded-sm px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-surface hover:text-brand-700"
           href="/hesabim"
         >
           Hesabım
         </Link>
         <Link
-          className="block rounded-lg px-3 py-2 text-sm text-zinc-700 transition hover:bg-orange-50 hover:text-orange-700"
+          className="block rounded-sm px-3 py-2 text-sm text-ink-muted transition-colors hover:bg-surface hover:text-brand-700"
           href="/hesabim/siparisler"
         >
           Siparişlerim
         </Link>
         {user.role === "admin" ? (
           <Link
-            className="block rounded-lg px-3 py-2 text-sm font-semibold text-orange-700 transition hover:bg-orange-50"
+            className="block rounded-sm px-3 py-2 text-sm font-semibold text-brand-700 transition-colors hover:bg-surface"
             href="/admin"
           >
             Yönetim Paneli
@@ -72,7 +75,7 @@ export async function UserMenu() {
         ) : null}
         <form action={logoutAction}>
           <button
-            className="mt-1 w-full rounded-lg border-t border-zinc-100 px-3 py-2 text-left text-sm text-red-600 transition hover:bg-red-50"
+            className="mt-1 w-full rounded-sm border-t border-line px-3 py-2 text-left text-sm text-ink-muted transition-colors hover:bg-surface hover:text-ink"
             type="submit"
           >
             Çıkış Yap

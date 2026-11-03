@@ -34,11 +34,11 @@ export function ProductImage({
         aria-label={alt}
         className={
           fallbackClassName ??
-          "flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-50 via-zinc-50 to-zinc-100"
+          "flex h-full w-full items-center justify-center bg-surface"
         }
         role="img"
       >
-        <span className="text-4xl font-bold text-orange-200">
+        <span className="font-display text-4xl font-semibold text-brass-300">
           {label.charAt(0).toLocaleUpperCase("tr")}
         </span>
       </div>

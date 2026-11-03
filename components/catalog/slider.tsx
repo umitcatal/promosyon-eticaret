@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 
 export type Slide = {
@@ -12,8 +13,18 @@ export type Slide = {
   link: string | null;
 };
 
+const DWELL_MS = 6000;
+
+/* Banners are 2092x752 with the headline and its own CTA baked into the left
+ * third, so the frame keeps the source ratio from `sm` up and anchors the crop
+ * to the left on phones instead of slicing the headline away. */
+const FRAME_CLASS =
+  "relative aspect-[1.6/1] w-full overflow-hidden bg-ink sm:aspect-[2.78/1]";
+const IMAGE_CLASS = "object-cover object-left sm:object-center";
+
 export function Slider({ slides }: { slides: Slide[] }) {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
   const [failedSlides, setFailedSlides] = useState<number[]>([]);
 
   const go = useCallback(
@@ -24,131 +35,180 @@ export function Slider({ slides }: { slides: Slide[] }) {
   );
 
   useEffect(() => {
-    if (slides.length < 2) return;
+    if (slides.length < 2 || paused) return;
     const timer = setInterval(() => {
       setActive((current) => (current + 1) % slides.length);
-    }, 6000);
+    }, DWELL_MS);
     return () => clearInterval(timer);
-  }, [slides.length]);
+  }, [paused, slides.length]);
+
+  const current = slides[active];
+  const hasCaption = Boolean(current?.title || current?.subtitle);
 
   return (
-    <section className="relative h-[240px] w-full overflow-hidden rounded-2xl bg-zinc-900 sm:h-[340px] lg:h-[440px]">
-      {slides.map((slide, index) => {
-        const hasCaption = Boolean(slide.title || slide.subtitle);
-        return (
-          <div
-            className={`absolute inset-0 transition-opacity duration-700 ${
-              index === active ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-            key={slide.id}
-          >
-            {failedSlides.includes(slide.id) ? (
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-zinc-800 to-orange-900" />
-            ) : (
-              <Image
-                alt={slide.title ?? "Promosyon ürünleri"}
-                className="object-cover"
-                fill
-                onError={() =>
-                  setFailedSlides((current) =>
-                    current.includes(slide.id)
-                      ? current
-                      : [...current, slide.id]
-                  )
-                }
-                priority={index === 0}
-                sizes="100vw"
-                src={slide.image_url}
-              />
-            )}
-            {hasCaption ? (
-              <>
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/75 via-zinc-950/35 to-transparent" />
-                <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 lg:p-14">
-                  {slide.title ? (
-                    <h2 className="max-w-xl text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl">
-                      {slide.title}
-                    </h2>
-                  ) : null}
-                  {slide.subtitle ? (
-                    <p className="mt-2 max-w-lg text-sm leading-6 text-zinc-200 sm:text-base">
-                      {slide.subtitle}
-                    </p>
-                  ) : null}
-                  {slide.link ? (
-                    <Link
-                      className="mt-5 inline-flex w-fit items-center gap-2 rounded-full bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-500"
-                      href={slide.link}
-                    >
-                      Hemen Keşfet
-                      <svg
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M5 12h14m-6-6 6 6-6 6" strokeLinecap="round" />
-                      </svg>
-                    </Link>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
-          </div>
-        );
-      })}
+    <section
+      aria-label="Öne çıkan koleksiyonlar"
+      aria-roledescription="carousel"
+      className="w-full overflow-hidden rounded-sm border border-line bg-paper"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className={FRAME_CLASS}>
+        {/* Full-bleed banners carry baked-in headlines, so slides wipe instead
+         * of dissolving — a crossfade doubles two headlines into one. */}
+        <motion.div
+          animate={{ x: `-${active * 100}%` }}
+          className="absolute inset-0 flex"
+          initial={false}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {slides.map((slide, index) => {
+            const isActive = index === active;
+            const failed = failedSlides.includes(slide.id);
+
+            return (
+              <div
+                aria-hidden={!isActive}
+                className="relative h-full w-full shrink-0"
+                key={slide.id}
+              >
+                {failed ? (
+                  <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_15%_10%,#1b2a22_0%,#14130f_60%)]" />
+                ) : (
+                  <motion.div
+                    animate={{ scale: isActive ? [1, 1.06] : 1 }}
+                    className="absolute inset-0 origin-left sm:origin-center"
+                    transition={{
+                      duration: isActive ? DWELL_MS / 1000 : 0.9,
+                      ease: "linear",
+                    }}
+                  >
+                    <Image
+                      alt={slide.title ?? "Promosyon ürünleri"}
+                      className={IMAGE_CLASS}
+                      fill
+                      fetchPriority={index === 0 ? "high" : "low"}
+                      loading={index === 0 ? undefined : "eager"}
+                      onError={() =>
+                        setFailedSlides((list) =>
+                          list.includes(slide.id)
+                            ? list
+                            : [...list, slide.id]
+                        )
+                      }
+                      priority={index === 0}
+                      sizes="(max-width: 640px) 100vw, 1280px"
+                      src={slide.image_url}
+                    />
+                  </motion.div>
+                )}
+              </div>
+            );
+          })}
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {hasCaption && current ? (
+            <motion.div
+              className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-ink/85 via-ink/30 to-transparent p-6 sm:p-10 lg:p-14"
+              initial={{ opacity: 0, y: 18 }}
+              key={current.id}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="eyebrow text-brass-300">Kurumsal Promosyon</span>
+              {current.title ? (
+                <h2 className="mt-3 max-w-2xl font-display text-[1.75rem] leading-[1.05] font-semibold text-paper sm:text-4xl lg:text-[3.25rem]">
+                  {current.title}
+                </h2>
+              ) : null}
+              {current.subtitle ? (
+                <p className="mt-3 max-w-lg text-sm leading-6 text-paper/75 sm:text-base">
+                  {current.subtitle}
+                </p>
+              ) : null}
+              {current.link ? (
+                <Link
+                  className="mt-6 inline-flex w-fit items-center gap-3 border-b border-brass-300/60 pb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-paper transition-colors hover:border-brass-300 hover:text-brass-200"
+                  href={current.link}
+                >
+                  Keşfedin
+                  <span aria-hidden="true">→</span>
+                </Link>
+              ) : null}
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </div>
 
       {slides.length > 1 ? (
-        <>
-          <button
-            aria-label="Önceki görsel"
-            className="absolute left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/40 sm:flex"
-            onClick={() => go(active - 1)}
-            type="button"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path d="m15 6-6 6 6 6" strokeLinecap="round" />
-            </svg>
-          </button>
-          <button
-            aria-label="Sonraki görsel"
-            className="absolute right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur transition hover:bg-white/40 sm:flex"
-            onClick={() => go(active + 1)}
-            type="button"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-            >
-              <path d="m9 6 6 6-6 6" strokeLinecap="round" />
-            </svg>
-          </button>
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+        <div className="flex items-center gap-4 border-t border-line px-4 py-2.5 sm:px-5">
+          <span className="font-mono text-[10px] tracking-[0.16em] text-ink-muted">
+            {String(active + 1).padStart(2, "0")} /{" "}
+            {String(slides.length).padStart(2, "0")}
+          </span>
+          <div className="flex flex-1 gap-1.5">
             {slides.map((slide, index) => (
               <button
+                aria-current={index === active}
                 aria-label={`${index + 1}. görsele git`}
-                className={`h-2 rounded-full transition-all ${
-                  index === active
-                    ? "w-6 bg-orange-500"
-                    : "w-2 bg-white/60 hover:bg-white"
-                }`}
+                className="group relative h-0.5 flex-1 overflow-hidden bg-ink/12"
                 key={slide.id}
                 onClick={() => go(index)}
                 type="button"
-              />
+              >
+                <span className="absolute inset-0 bg-ink/0 transition-colors group-hover:bg-ink/20" />
+                {index === active ? (
+                  <motion.span
+                    animate={{ scaleX: 1 }}
+                    className="absolute inset-0 origin-left bg-brass-500"
+                    initial={{ scaleX: 0 }}
+                    key={`fill-${slide.id}-${paused ? "p" : "r"}`}
+                    transition={{
+                      duration: paused ? 0 : DWELL_MS / 1000,
+                      ease: "linear",
+                    }}
+                  />
+                ) : null}
+              </button>
             ))}
           </div>
-        </>
+          <div className="flex gap-1.5">
+            <button
+              aria-label="Önceki görsel"
+              className="flex size-8 items-center justify-center rounded-sm border border-line text-ink-muted transition-colors hover:border-ink hover:text-ink"
+              onClick={() => go(active - 1)}
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                viewBox="0 0 24 24"
+              >
+                <path d="m15 6-6 6 6 6" strokeLinecap="round" />
+              </svg>
+            </button>
+            <button
+              aria-label="Sonraki görsel"
+              className="flex size-8 items-center justify-center rounded-sm border border-line text-ink-muted transition-colors hover:border-ink hover:text-ink"
+              onClick={() => go(active + 1)}
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="size-3.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                viewBox="0 0 24 24"
+              >
+                <path d="m9 6 6 6-6 6" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+        </div>
       ) : null}
     </section>
   );
@@ -156,35 +216,42 @@ export function Slider({ slides }: { slides: Slide[] }) {
 
 export function HeroFallback() {
   return (
-    <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-orange-900 px-6 py-14 sm:px-10 sm:py-20 lg:px-14">
-      <div className="relative max-w-2xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-orange-400">
-          Kurumsal Promosyon Ürünleri
-        </p>
-        <h1 className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
-          Markanızı binlerce ürüne taşıyın
+    <section className="relative overflow-hidden rounded-sm border border-line bg-ink px-6 py-16 sm:px-12 sm:py-24 lg:px-16">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-70"
+        style={{
+          backgroundImage:
+            "radial-gradient(90% 70% at 82% 18%, rgba(217,180,91,0.16) 0%, rgba(20,19,15,0) 60%), radial-gradient(70% 60% at 10% 90%, rgba(37,106,78,0.28) 0%, rgba(20,19,15,0) 65%)",
+        }}
+      />
+      <div className="relative max-w-3xl">
+        <p className="eyebrow text-brass-300">Kurumsal Promosyon Ürünleri</p>
+        <h1 className="mt-5 font-display text-[2.1rem] leading-[1.02] font-semibold text-paper sm:text-5xl lg:text-[4rem]">
+          Markanızı
+          <span className="block text-brass-200 italic">binlerce ürüne</span>
+          taşıyın.
         </h1>
-        <p className="mt-4 max-w-lg text-sm leading-6 text-zinc-300 sm:text-base">
+        <p className="mt-6 max-w-lg text-sm leading-7 text-paper/70 sm:text-base">
           Kalemden teknolojiye, çantadan kupaya yüzlerce promosyon ürünü.
-          Kurumsal baskı ve özelleştirme için hemen keşfedin.
+          Kurumsal baskı ve özelleştirme için koleksiyonumuza göz atın.
         </p>
-        <div className="mt-7 flex flex-wrap gap-3">
+        <div className="mt-9 flex flex-wrap items-center gap-6">
           <Link
-            className="inline-flex items-center gap-2 rounded-full bg-orange-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-orange-500"
+            className="inline-flex items-center gap-3 rounded-sm bg-paper px-6 py-3 text-sm font-semibold text-ink transition-colors hover:bg-brass-200"
             href="#kategoriler"
           >
-            Kategorileri Keşfet
+            Kategorileri İnceleyin
           </Link>
           <Link
-            className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-            href="/arama?q=kalem"
+            className="inline-flex items-center gap-2 border-b border-paper/30 pb-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-paper/80 transition-colors hover:border-brass-300 hover:text-brass-200"
+            href="/urunler"
           >
-            Ürün Ara
+            Tüm Ürünler
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
       </div>
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-orange-600/30 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 right-24 h-80 w-80 rounded-full bg-orange-400/20 blur-3xl" />
     </section>
   );
 }

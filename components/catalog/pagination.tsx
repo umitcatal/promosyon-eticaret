@@ -33,54 +33,60 @@ export function Pagination({
     pages.push(candidate);
   }
 
-  const linkClass =
-    "flex h-10 min-w-10 items-center justify-center rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-700 transition hover:border-orange-400 hover:text-orange-600";
+  const cellClass =
+    "flex h-10 min-w-10 items-center justify-center rounded-sm border border-line bg-paper px-3 font-mono text-[12px] tracking-[0.08em] text-ink-muted transition-colors hover:border-ink hover:text-ink";
+  const activeClass =
+    "flex h-10 min-w-10 items-center justify-center rounded-sm border border-ink bg-ink px-3 font-mono text-[12px] tracking-[0.08em] text-paper";
+  const stepClass =
+    "flex h-10 items-center gap-2 rounded-sm border border-line bg-paper px-3.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink transition-colors hover:border-ink hover:bg-surface";
 
   return (
-    <nav className="mt-8 flex flex-wrap items-center justify-center gap-2">
+    <nav
+      aria-label="Sayfalar"
+      className="mt-12 flex flex-wrap items-center justify-center gap-1.5 border-t border-line pt-8"
+    >
       {page > 1 ? (
-        <Link className={linkClass} href={href(page - 1)}>
-          Önceki
+        <Link className={stepClass} href={href(page - 1)}>
+          <span aria-hidden="true">←</span> Önceki
         </Link>
       ) : null}
 
       {pages[0] !== 1 ? (
         <>
-          <Link className={linkClass} href={href(1)}>
+          <Link className={cellClass} href={href(1)}>
             1
           </Link>
-          {pages[0] > 2 ? <span className="px-1 text-zinc-400">…</span> : null}
+          {pages[0] > 2 ? (
+            <span className="px-1 font-mono text-[12px] text-line-strong">…</span>
+          ) : null}
         </>
       ) : null}
 
       {pages.map((candidate) => (
         <Link
-          className={
-            candidate === page
-              ? "flex h-10 min-w-10 items-center justify-center rounded-lg bg-orange-600 px-3 text-sm font-semibold text-white"
-              : linkClass
-          }
+          aria-current={candidate === page ? "page" : undefined}
+          className={candidate === page ? activeClass : cellClass}
           href={href(candidate)}
           key={candidate}
         >
-          {candidate}
+          {String(candidate).padStart(2, "0")}
         </Link>
       ))}
 
       {pages[pages.length - 1] !== totalPages ? (
         <>
           {pages[pages.length - 1] < totalPages - 1 ? (
-            <span className="px-1 text-zinc-400">…</span>
+            <span className="px-1 font-mono text-[12px] text-line-strong">…</span>
           ) : null}
-          <Link className={linkClass} href={href(totalPages)}>
-            {totalPages}
+          <Link className={cellClass} href={href(totalPages)}>
+            {String(totalPages).padStart(2, "0")}
           </Link>
         </>
       ) : null}
 
       {page < totalPages ? (
-        <Link className={linkClass} href={href(page + 1)}>
-          Sonraki
+        <Link className={stepClass} href={href(page + 1)}>
+          Sonraki <span aria-hidden="true">→</span>
         </Link>
       ) : null}
     </nav>

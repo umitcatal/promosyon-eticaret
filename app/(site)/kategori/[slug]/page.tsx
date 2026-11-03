@@ -2,6 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import {
+  Breadcrumb,
+  CatalogHeading,
+  type Crumb,
+} from "@/components/catalog/catalog-chrome";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { SortSelect } from "@/components/catalog/sort-select";
@@ -25,12 +30,12 @@ type SearchParams = { sayfa?: string; sirala?: string };
 function CategorySkeleton() {
   return (
     <div>
-      <div className="h-4 w-56 animate-pulse rounded bg-zinc-100" />
-      <div className="mt-4 h-8 w-64 animate-pulse rounded bg-zinc-100" />
-      <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="h-3 w-56 animate-pulse rounded-sm bg-surface" />
+      <div className="mt-5 h-10 w-72 animate-pulse rounded-sm bg-surface" />
+      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {Array.from({ length: 8 }).map((_, index) => (
           <div
-            className="aspect-[3/4] animate-pulse rounded-2xl bg-zinc-100"
+            className="aspect-[3/4] animate-pulse rounded-sm border border-line bg-surface/60"
             key={index}
           />
         ))}
@@ -59,54 +64,43 @@ async function CategoryContent({
   const paginationQuery: Record<string, string> = {};
   if (sort !== "newest") paginationQuery.sirala = sort;
 
+  const crumbs: Crumb[] = [
+    { href: "/", label: "Ana Sayfa" },
+    ...(parent ? [{ href: `/kategori/${parent.slug}`, label: parent.name }] : []),
+    { label: category.name },
+  ];
+
   return (
     <div>
-      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-zinc-500">
-        <Link className="transition hover:text-orange-600" href="/">
-          Ana Sayfa
-        </Link>
-        {parent ? (
-          <>
-            <span>/</span>
-            <Link
-              className="transition hover:text-orange-600"
-              href={`/kategori/${parent.slug}`}
-            >
-              {parent.name}
-            </Link>
-          </>
-        ) : null}
-        <span>/</span>
-        <span className="font-medium text-zinc-800">{category.name}</span>
-      </nav>
+      <Breadcrumb items={crumbs} />
 
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            {category.name}
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            {products.total} ürün listeleniyor
-          </p>
-        </div>
-        <SortSelect value={sort} />
+      <div className="mt-7">
+        <CatalogHeading
+          aside={<SortSelect value={sort} />}
+          eyebrow={parent ? parent.name : "Koleksiyon"}
+          meta={`${products.total} ürün · sayfa ${String(products.page).padStart(2, "0")}`}
+          title={category.name}
+        />
       </div>
 
       {children.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {children.map((child) => (
-            <Link
-              className="rounded-full border border-zinc-200 bg-white px-3.5 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-orange-300 hover:text-orange-700"
-              href={`/kategori/${child.slug}`}
-              key={child.id}
-            >
-              {child.name}
-            </Link>
-          ))}
+        <div className="border-b border-line pb-7">
+          <p className="eyebrow">Alt gruplar</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {children.map((child) => (
+              <Link
+                className="rounded-sm border border-line bg-paper px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-ink hover:text-ink"
+                href={`/kategori/${child.slug}`}
+                key={child.id}
+              >
+                {child.name}
+              </Link>
+            ))}
+          </div>
         </div>
       ) : null}
 
-      <div className="mt-6">
+      <div className="mt-8">
         <ProductGrid products={products.items} />
       </div>
 
@@ -123,7 +117,7 @@ async function CategoryContent({
 
 export default function CategoryPage(props: PageProps<"/kategori/[slug]">) {
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:py-14">
       <Suspense fallback={<CategorySkeleton />}>
         <CategoryContent
           params={props.params}

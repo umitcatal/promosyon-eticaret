@@ -1,25 +1,150 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f3;
+  --foreground: #14130f;
 }
 
+/*
+ * Literal-hex tokens live in this block so utilities such as `bg-brand-600`
+ * and `orange-500/20` compile to concrete colors instead of nested var()
+ * lookups, which color-mix() cannot resolve through an indirection.
+ */
+@theme {
+  --color-paper: #faf8f3;
+  --color-surface: #f3efe6;
+  --color-ink: #14130f;
+  --color-ink-muted: #4b4a42;
+  --color-line: #e6dfd1;
+  --color-line-strong: #cfc6b4;
+
+  --color-brand-50: #edf2ef;
+  --color-brand-100: #d7e3db;
+  --color-brand-200: #b4cbbe;
+  --color-brand-300: #7fa98f;
+  --color-brand-400: #457d64;
+  --color-brand-500: #256a4e;
+  --color-brand-600: #17513e;
+  --color-brand-700: #0f3f30;
+  --color-brand-800: #0b3126;
+  --color-brand-900: #072019;
+
+  --color-brass-50: #fbf3e2;
+  --color-brass-100: #f5e7c6;
+  --color-brass-200: #e6c88a;
+  --color-brass-300: #d9b45b;
+  --color-brass-400: #c39b3e;
+  --color-brass-500: #b08123;
+  --color-brass-600: #97691d;
+  --color-brass-700: #7c5410;
+  --color-brass-800: #5e3f0c;
+  --color-brass-900: #42290a;
+
+  /* Retires the legacy accent without re-touching every page in the app. */
+  --color-orange-50: #edf2ef;
+  --color-orange-100: #d7e3db;
+  --color-orange-200: #b4cbbe;
+  --color-orange-300: #7fa98f;
+  --color-orange-400: #457d64;
+  --color-orange-500: #256a4e;
+  --color-orange-600: #17513e;
+  --color-orange-700: #0f3f30;
+  --color-orange-800: #0b3126;
+  --color-orange-900: #072019;
+  --color-orange-950: #041209;
+}
+
+/* Only var()-referencing tokens belong inline. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-geist);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+}
+
+.eyebrow {
+  color: var(--color-brass-700);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+/*
+ * The header row shrinks and its collapsible strips (announcement line, mobile
+ * search) collapse purely in CSS, so the server-rendered header needs no
+ * measurement on the client.
+ */
+[data-collapse] {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+[data-collapse] > div {
+  overflow: hidden;
+}
+
+[data-condensed="true"] [data-collapse] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-collapse] {
+    transition:
+      grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.25s ease;
+  }
+
+  .site-header-bar {
+    transition: padding-block 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  [data-condensed="true"] .site-header-bar {
+    padding-block: 0.625rem;
+  }
+}
+
+/*
+ * Section reveals are CSS-only so server-rendered markup never ships hidden
+ * content, and the whole mechanism disappears when motion is reduced.
+ */
+[data-reveal] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 700ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  [data-reveal][data-inview="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-index-preview] {
+    transition: none;
+  }
 }
 
 .rich-text {
-  color: #3f3f46;
+  color: #3f3e37;
   font-size: 0.95rem;
   line-height: 1.75;
 }
@@ -31,18 +156,19 @@ body {
 .rich-text h2,
 .rich-text h3,
 .rich-text h4 {
-  color: #18181b;
-  font-weight: 700;
-  line-height: 1.3;
+  color: #14130f;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .rich-text h2 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   margin-top: 2rem;
 }
 
 .rich-text h3 {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   margin-top: 1.5rem;
 }
 
@@ -66,31 +192,33 @@ body {
 }
 
 .rich-text a {
-  color: #ea580c;
+  color: #17513e;
   font-weight: 600;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 3px;
 }
 
 .rich-text strong {
-  color: #18181b;
+  color: #14130f;
   font-weight: 700;
 }
 
 .rich-text blockquote {
-  background: #fff7ed;
-  border-left: 3px solid #fb923c;
-  color: #52525b;
+  background: #f3efe6;
+  border-left: 3px solid #d9b45b;
+  color: #4b4a42;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-style: italic;
   padding: 0.75rem 1rem;
 }
 
 .rich-text hr {
-  border-color: #e4e4e7;
+  border-color: #e6dfd1;
   margin: 2rem 0;
 }
 
 .rich-text code {
-  background: #f4f4f5;
+  background: #f3efe6;
   border-radius: 0.25rem;
   font-family: var(--font-geist-mono);
   font-size: 0.85em;
@@ -98,9 +226,9 @@ body {
 }
 
 .rich-text pre {
-  background: #18181b;
-  border-radius: 0.75rem;
-  color: #fafafa;
+  background: #14130f;
+  border-radius: 0.5rem;
+  color: #f6f3ec;
   overflow-x: auto;
   padding: 1rem;
 }

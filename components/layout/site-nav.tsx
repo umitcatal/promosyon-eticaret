@@ -1,42 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/catalog/product-image";
 import type { CategoryNode, MenuNavItem } from "@/lib/types";
 
-function Chevron({ open }: { open?: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className={`h-3 w-3 text-zinc-400 transition ${open ? "rotate-180" : ""}`}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      <path d="m6 9 6 6 6-6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Hamburger({ open }: { open: boolean }) {
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      viewBox="0 0 24 24"
-    >
-      {open ? (
-        <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
-      ) : (
-        <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
-      )}
-    </svg>
-  );
+function ordinal(position: number): string {
+  return String(position + 1).padStart(2, "0");
 }
 
 function CategoryChildren({
@@ -48,52 +19,40 @@ function CategoryChildren({
 }) {
   if (category.children.length === 0) {
     return (
-      <p className="mt-4 text-sm text-zinc-500">
-        Bu kategoride alt kategori bulunmuyor.
+      <p className="mt-6 border-t border-line pt-6 font-display text-lg text-ink-muted">
+        Bu grup tek ürün altından oluşuyor.
       </p>
     );
   }
 
   return (
-    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="mt-6 grid grid-cols-2 gap-px border-t border-line bg-line/60 pt-px sm:grid-cols-3 xl:grid-cols-4">
       {category.children.map((child) => (
-        <div key={child.id}>
+        <div className="bg-paper" key={child.id}>
           <Link
-            className="group block overflow-hidden rounded-xl border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md"
+            className="group flex h-full flex-col gap-3 p-3 transition-colors hover:bg-surface/70"
             href={`/kategori/${child.slug}`}
             onClick={onNavigate}
           >
-            <div className="relative aspect-square w-full bg-zinc-50">
+            <span className="relative aspect-[4/3] w-full overflow-hidden rounded-sm border border-line bg-surface/50">
               <ProductImage
                 alt={child.name}
-                className="object-contain p-3 transition duration-300 group-hover:scale-105"
-                fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-50 via-zinc-50 to-zinc-100 text-4xl font-bold text-orange-200"
-                fallbackLabel={child.name}
+                className="object-contain p-3 mix-blend-multiply transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+                fallbackClassName="flex h-full w-full items-center justify-center bg-surface font-display text-3xl font-semibold text-brass-300"
                 sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 16vw"
                 src={child.image_url}
                 unoptimized={child.image_url?.startsWith("http") ?? false}
               />
-            </div>
-            <p className="line-clamp-2 border-t border-zinc-100 px-3 py-2 text-center text-[13px] font-semibold leading-5 text-zinc-800 transition group-hover:text-orange-700">
+            </span>
+            <span className="line-clamp-2 font-display text-[15px] leading-snug font-semibold text-ink decoration-line-strong decoration-1 underline-offset-4 group-hover:underline">
               {child.name}
-            </p>
+            </span>
+            {child.children.length > 0 ? (
+              <span className="mt-auto font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+                {child.children.length} alt grup
+              </span>
+            ) : null}
           </Link>
-          {child.children.length > 0 ? (
-            <ul className="mt-1.5 space-y-1 px-1">
-              {child.children.map((grandchild) => (
-                <li key={grandchild.id}>
-                  <Link
-                    className="block truncate text-xs text-zinc-500 transition hover:text-orange-600"
-                    href={`/kategori/${grandchild.slug}`}
-                    onClick={onNavigate}
-                    title={grandchild.name}
-                  >
-                    {grandchild.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : null}
         </div>
       ))}
     </div>
@@ -109,8 +68,11 @@ export function SiteNav({
 }) {
   const [openId, setOpenId] = useState<number | null>(null);
   const [activeTopId, setActiveTopId] = useState<number | null>(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openTopId, setOpenTopId] = useState<number | null>(null);
+  const [menuGroupsOpen, setMenuGroupsOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const openItem = items.find(
     (item) => item.id === openId && item.type === "categories"
@@ -143,33 +105,52 @@ export function SiteNav({
     setOpenId(null);
   }
 
+  function closeDrawer() {
+    setDrawerOpen(false);
+    menuButtonRef.current?.focus();
+  }
+
+  function dismissAll() {
+    closeMega();
+    if (drawerOpen) closeDrawer();
+  }
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [drawerOpen]);
+
   return (
     <div
-      className="relative border-t border-zinc-100 bg-zinc-50"
+      className="relative border-t border-line"
       onKeyDown={(event) => {
-        if (event.key === "Escape") {
-          setOpenId(null);
-          setMobileOpen(false);
-        }
+        if (event.key === "Escape") dismissAll();
       }}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 md:hidden">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 md:hidden">
         <button
           aria-controls="mobile-menu"
-          aria-expanded={mobileOpen}
-          className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
-          onClick={() => setMobileOpen((current) => !current)}
+          aria-expanded={drawerOpen}
+          className="inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.2em] text-ink"
+          onClick={() => setDrawerOpen((current) => !current)}
+          ref={menuButtonRef}
           type="button"
         >
-          <Hamburger open={mobileOpen} />
+          <span className="flex flex-col gap-[3px]" aria-hidden="true">
+            <span className="block h-px w-5 bg-ink" />
+            <span className="block h-px w-5 bg-ink" />
+          </span>
           Menü
         </button>
         <Link
-          className="text-xs font-semibold text-zinc-500 transition hover:text-orange-600"
+          className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted transition-colors hover:text-brand-700"
           href="/urunler"
-          onClick={() => setMobileOpen(false)}
         >
-          Tüm Ürünler
+          Tüm Ürünler →
         </Link>
       </div>
 
@@ -178,13 +159,17 @@ export function SiteNav({
         onMouseEnter={cancelClose}
         onMouseLeave={scheduleClose}
       >
-        <div className="mx-auto flex max-w-7xl items-center gap-0.5 px-4">
+        <div className="mx-auto flex max-w-7xl items-center gap-1 px-4">
           {items.map((item) =>
             item.type === "categories" ? (
               <Link
                 aria-expanded={openId === item.id}
                 aria-haspopup="true"
-                className="flex items-center gap-1 whitespace-nowrap px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:text-orange-600 focus:text-orange-600 focus:outline-none"
+                className={`group relative px-3 py-3 text-[13px] font-medium tracking-wide transition-colors focus:outline-none ${
+                  openId === item.id
+                    ? "text-ink"
+                    : "text-ink-muted hover:text-ink focus:text-ink"
+                }`}
                 href={item.href}
                 key={item.id}
                 onClick={() => setOpenId(null)}
@@ -192,11 +177,17 @@ export function SiteNav({
                 onMouseEnter={() => openMega(item)}
               >
                 {item.label}
-                <Chevron open={openId === item.id} />
+                <span
+                  className={`absolute inset-x-3 bottom-2 h-px origin-left bg-brass-500 transition-transform duration-300 ease-out ${
+                    openId === item.id
+                      ? "scale-x-100"
+                      : "scale-x-0 group-hover:scale-x-100 group-focus-visible:scale-x-100"
+                  }`}
+                />
               </Link>
             ) : (
               <Link
-                className="whitespace-nowrap px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:text-orange-600"
+                className="group relative px-3 py-3 text-[13px] font-medium tracking-wide text-ink-muted transition-colors hover:text-ink"
                 href={item.href}
                 key={item.id}
                 onFocus={closeMega}
@@ -205,148 +196,264 @@ export function SiteNav({
                 target={item.open_in_new_tab ? "_blank" : undefined}
               >
                 {item.label}
+                <span className="absolute inset-x-3 bottom-2 h-px origin-left scale-x-0 bg-brass-500 transition-transform duration-300 ease-out group-hover:scale-x-100" />
               </Link>
             )
           )}
         </div>
 
-        {openItem ? (
-          <div className="absolute inset-x-0 top-full z-50 border-t border-zinc-200 bg-white shadow-xl">
-            <div className="mx-auto max-w-7xl px-4 py-6">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                  Ürün Kategorileri
-                </p>
-                <Link
-                  className="rounded-full bg-orange-600 px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-700"
-                  href="/urunler"
-                  onClick={() => setOpenId(null)}
-                >
-                  Tüm Ürünler
-                </Link>
-              </div>
-
-              {categories.length === 0 ? (
-                <p className="py-6 text-sm text-zinc-500">
-                  Henüz kategori bulunmuyor.
-                </p>
-              ) : (
-                <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-                  <div className="max-h-[55vh] space-y-1 overflow-y-auto pr-2">
-                    {categories.map((category) => (
-                      <Link
-                        className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition ${
-                          activeTop?.id === category.id
-                            ? "bg-orange-50 text-orange-700"
-                            : "text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900"
-                        }`}
-                        href={`/kategori/${category.slug}`}
-                        key={category.id}
-                        onClick={() => setOpenId(null)}
-                        onFocus={() => setActiveTopId(category.id)}
-                        onMouseEnter={() => setActiveTopId(category.id)}
-                      >
-                        <span className="truncate">{category.name}</span>
-                        {category.children.length > 0 ? (
-                          <span className="ml-2 shrink-0 text-[11px] text-zinc-400">
-                            {category.children.length}
-                          </span>
-                        ) : null}
-                      </Link>
-                    ))}
-                  </div>
-
-                  <div className="min-w-0">
-                    {activeTop ? (
-                      <>
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <Link
-                            className="text-base font-bold text-zinc-900 transition hover:text-orange-600"
-                            href={`/kategori/${activeTop.slug}`}
-                            onClick={() => setOpenId(null)}
-                          >
-                            {activeTop.name}
-                          </Link>
-                          <Link
-                            className="text-xs font-semibold text-orange-600 transition hover:text-orange-700"
-                            href={`/kategori/${activeTop.slug}`}
-                            onClick={() => setOpenId(null)}
-                          >
-                            Tümünü gör
-                          </Link>
-                        </div>
-                        <CategoryChildren
-                          category={activeTop}
-                          onNavigate={() => setOpenId(null)}
-                        />
-                      </>
-                    ) : null}
-                  </div>
+        <AnimatePresence>
+          {openItem ? (
+            <motion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute inset-x-0 top-full z-50 border-b border-line-strong bg-paper shadow-[0_28px_60px_-40px_rgba(20,19,15,0.5)]"
+              exit={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0, y: -8 }}
+              key={openItem.id}
+              transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="mx-auto max-w-7xl px-4 py-6">
+                <div className="flex items-baseline justify-between gap-4">
+                  <p className="eyebrow">Ürün Grupları</p>
+                  <Link
+                    className="border-b border-line-strong pb-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700"
+                    href="/urunler"
+                    onClick={() => setOpenId(null)}
+                  >
+                    Tüm Ürünler →
+                  </Link>
                 </div>
-              )}
-            </div>
-          </div>
-        ) : null}
+
+                {categories.length === 0 ? (
+                  <p className="py-8 text-sm text-ink-muted">
+                    Henüz kategori bulunmuyor.
+                  </p>
+                ) : (
+                  <div className="mt-5 grid gap-8 lg:grid-cols-[248px_1fr]">
+                    <ol className="max-h-[54vh] overflow-y-auto border-t border-line pr-2">
+                      {categories.map((category, position) => (
+                        <li className="border-b border-line/70" key={category.id}>
+                          <Link
+                            className={`flex items-baseline gap-3 py-2.5 text-sm transition-colors ${
+                              activeTop?.id === category.id
+                                ? "text-brand-700"
+                                : "text-ink-muted hover:text-ink"
+                            }`}
+                            href={`/kategori/${category.slug}`}
+                            onClick={() => setOpenId(null)}
+                            onFocus={() => setActiveTopId(category.id)}
+                            onMouseEnter={() => setActiveTopId(category.id)}
+                          >
+                            <span className="w-5 shrink-0 font-mono text-[10px] tracking-[0.12em] text-brass-600">
+                              {ordinal(position)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-display font-semibold">
+                              {category.name}
+                            </span>
+                            {category.children.length > 0 ? (
+                              <span className="shrink-0 font-mono text-[10px] text-ink-muted">
+                                {category.children.length}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div className="min-w-0">
+                      {activeTop ? (
+                        <>
+                          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                            <Link
+                              className="font-display text-2xl font-semibold text-ink transition-colors hover:text-brand-700"
+                              href={`/kategori/${activeTop.slug}`}
+                              onClick={() => setOpenId(null)}
+                            >
+                              {activeTop.name}
+                            </Link>
+                            <Link
+                              className="font-mono text-[10px] uppercase tracking-[0.18em] text-brand-600 transition-colors hover:text-brand-700"
+                              href={`/kategori/${activeTop.slug}`}
+                              onClick={() => setOpenId(null)}
+                            >
+                              Grubu gör →
+                            </Link>
+                          </div>
+                          <CategoryChildren
+                            category={activeTop}
+                            onNavigate={() => setOpenId(null)}
+                          />
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
       </div>
 
-      {mobileOpen ? (
-        <div className="border-t border-zinc-200 bg-white md:hidden" id="mobile-menu">
-          <nav className="mx-auto max-w-7xl space-y-1 px-4 py-3">
-            {items.map((item) =>
-              item.type === "categories" ? (
-                <details className="group" key={item.id}>
-                  <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
-                    {item.label}
-                    <Chevron />
-                  </summary>
-                  <div className="mt-1 space-y-1 border-l border-zinc-200 pl-3">
-                    <Link
-                      className="block rounded-lg px-3 py-1.5 text-sm font-semibold text-orange-600 transition hover:bg-orange-50"
-                      href="/urunler"
-                      onClick={() => setMobileOpen(false)}
-                    >
-                      Tüm Ürünler
-                    </Link>
-                    {categories.map((category) => (
-                      <details className="group" key={category.id}>
-                        <summary className="flex cursor-pointer list-none items-center justify-between rounded-lg px-3 py-1.5 text-sm text-zinc-700 transition hover:bg-zinc-50 [&::-webkit-details-marker]:hidden">
-                          {category.name}
-                          {category.children.length > 0 ? <Chevron /> : null}
-                        </summary>
-                        {category.children.length > 0 ? (
-                          <div className="ml-3 border-l border-zinc-200 pl-3">
-                            {category.children.map((child) => (
-                              <Link
-                                className="block rounded-lg px-3 py-1.5 text-sm text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
-                                href={`/kategori/${child.slug}`}
-                                key={child.id}
-                                onClick={() => setMobileOpen(false)}
-                              >
-                                {child.name}
-                              </Link>
-                            ))}
-                          </div>
-                        ) : null}
-                      </details>
-                    ))}
-                  </div>
-                </details>
-              ) : (
-                <Link
-                  className="block rounded-lg px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-                  href={item.href}
-                  key={item.id}
-                  onClick={() => setMobileOpen(false)}
-                  rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
-                  target={item.open_in_new_tab ? "_blank" : undefined}
+      <AnimatePresence>
+        {drawerOpen ? (
+          <div className="fixed inset-0 z-50 md:hidden" id="mobile-menu">
+            <motion.div
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 bg-ink/45"
+              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }}
+              onClick={closeDrawer}
+              transition={{ duration: 0.24 }}
+            />
+            <motion.div
+              animate={{ x: 0 }}
+              className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col border-r border-line-strong bg-paper"
+              exit={{ x: "-100%" }}
+              initial={{ x: "-100%" }}
+              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                <span className="eyebrow">Menü</span>
+                <button
+                  aria-label="Menüyü kapat"
+                  autoFocus
+                  className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-muted transition-colors hover:text-ink"
+                  onClick={closeDrawer}
+                  type="button"
                 >
-                  {item.label}
+                  Kapat ×
+                </button>
+              </div>
+
+              <nav className="flex-1 overflow-y-auto px-4 py-3">
+                <ul className="border-t border-line">
+                  {items.map((item) =>
+                    item.type === "categories" ? (
+                      <li className="border-b border-line" key={item.id}>
+                        <div className="flex items-center justify-between gap-3 py-3">
+                          <Link
+                            className="font-display text-lg font-semibold text-ink"
+                            href={item.href}
+                            onClick={() => setDrawerOpen(false)}
+                          >
+                            {item.label}
+                          </Link>
+                          <button
+                            aria-expanded={menuGroupsOpen}
+                            aria-label={`${item.label} kategorilerini aç`}
+                            className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted"
+                            onClick={() =>
+                              setMenuGroupsOpen((current) => !current)
+                            }
+                            type="button"
+                          >
+                            {menuGroupsOpen ? "Gizle −" : "Aç +"}
+                          </button>
+                        </div>
+                        <div
+                          className={`grid transition-all duration-300 ease-out ${
+                            menuGroupsOpen
+                              ? "grid-rows-[1fr] opacity-100"
+                              : "grid-rows-[0fr] opacity-0"
+                          }`}
+                        >
+                          <div className="overflow-hidden">
+                            <ul className="mb-3 border-l border-line pl-4">
+                              {categories.map((category) => (
+                                <li key={category.id}>
+                                  <div className="flex items-center justify-between gap-3">
+                                    <Link
+                                      className="block py-2 text-sm text-ink-muted transition-colors hover:text-brand-700"
+                                      href={`/kategori/${category.slug}`}
+                                      onClick={() => setDrawerOpen(false)}
+                                    >
+                                      {category.name}
+                                    </Link>
+                                    {category.children.length > 0 ? (
+                                      <button
+                                        aria-label={`${category.name} alt gruplarını aç`}
+                                        className="font-mono text-[10px] text-brass-600"
+                                        onClick={() =>
+                                          setOpenTopId((current) =>
+                                            current === category.id
+                                              ? null
+                                              : category.id
+                                          )
+                                        }
+                                        type="button"
+                                      >
+                                        {openTopId === category.id
+                                          ? "−"
+                                          : "+"}
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                  <div
+                                    className={`grid transition-all duration-300 ease-out ${
+                                      openTopId === category.id
+                                        ? "grid-rows-[1fr] opacity-100"
+                                        : "grid-rows-[0fr] opacity-0"
+                                    }`}
+                                  >
+                                    <div className="overflow-hidden">
+                                      <ul className="mb-2 ml-4 border-l border-line pl-3">
+                                        {category.children.map((child) => (
+                                          <li key={child.id}>
+                                            <Link
+                                              className="block py-1.5 text-sm text-ink-muted transition-colors hover:text-brand-700"
+                                              href={`/kategori/${child.slug}`}
+                                              onClick={() =>
+                                                setDrawerOpen(false)
+                                              }
+                                            >
+                                              {child.name}
+                                            </Link>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </li>
+                    ) : (
+                      <li className="border-b border-line" key={item.id}>
+                        <Link
+                          className="block py-3 font-display text-lg font-semibold text-ink"
+                          href={item.href}
+                          onClick={() => setDrawerOpen(false)}
+                          rel={
+                            item.open_in_new_tab
+                              ? "noopener noreferrer"
+                              : undefined
+                          }
+                          target={item.open_in_new_tab ? "_blank" : undefined}
+                        >
+                          {item.label}
+                        </Link>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </nav>
+
+              <div className="border-t border-line px-4 py-3">
+                <Link
+                  className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-ink"
+                  href="/urunler"
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  Tüm Ürünler
+                  <span aria-hidden="true">→</span>
                 </Link>
-              )
-            )}
-          </nav>
-        </div>
-      ) : null}
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

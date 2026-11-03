@@ -1,17 +1,23 @@
+import Link from "next/link";
 import {
-  CategoryGrid,
+  CategoryIndex,
   type CategoryCard,
-} from "@/components/catalog/category-grid";
-import { ProductGrid } from "@/components/catalog/product-card";
+} from "@/components/catalog/category-index";
+import {
+  ProductGrid,
+  ProductLedger,
+} from "@/components/catalog/product-card";
 import { HeroFallback, Slider } from "@/components/catalog/slider";
+import { Reveal } from "@/components/motion/reveal";
 import {
   getCategoryCardImage,
   getCategoryTree,
   getFeaturedProducts,
+  getNewProducts,
   getSliderItems,
 } from "@/lib/queries";
 
-const FEATURES = [
+const PROCESS = [
   {
     title: "Kurumsal Baskı",
     description: "Ürünlerinize şirket logonuzu ve özel tasarımlarınızı uygularız.",
@@ -31,17 +37,21 @@ const FEATURES = [
 ];
 
 export default async function HomePage() {
-  const [slides, tree, featured] = await Promise.all([
+  const [slides, tree, featured, newArrivals] = await Promise.all([
     getSliderItems(),
     getCategoryTree(),
     getFeaturedProducts(8),
+    getNewProducts(6),
   ]);
 
+  const topCategories = tree.slice(0, 8);
+
   const categoryCards: CategoryCard[] = await Promise.all(
-    tree.slice(0, 8).map(async (top) => ({
+    topCategories.map(async (top) => ({
       id: top.id,
       name: top.name,
       slug: top.slug,
+      childCount: top.children.length,
       image:
         top.image_url ??
         (await getCategoryCardImage([
@@ -52,51 +62,104 @@ export default async function HomePage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
-      {slides.length > 0 ? <Slider slides={slides} /> : <HeroFallback />}
+    <div className="flex-1">
+      <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:pt-6">
+        {slides.length > 0 ? <Slider slides={slides} /> : <HeroFallback />}
+      </section>
 
-      <section className="mt-10" id="kategoriler">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
-              Kategoriler
+      <Reveal className="mx-auto w-full max-w-7xl px-4">
+        <section className="mt-16 sm:mt-24" id="kategoriler">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <div>
+              <p className="eyebrow">Bölüm 01 — Koleksiyon</p>
+              <h2 className="mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                Ürün Grupları
+              </h2>
+            </div>
+            <p className="max-w-sm text-sm leading-6 text-ink-muted">
+              Her grup, kurumsal baskıya uygun alternatiflerle birlikte
+              listelenir. Üzerine gelerek alt grupları görün.
+            </p>
+          </div>
+          <div className="mt-8">
+            <CategoryIndex categories={categoryCards} />
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal className="mx-auto w-full max-w-7xl px-4">
+        <section className="mt-20 sm:mt-28">
+          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+            <div>
+              <p className="eyebrow">Bölüm 02 — Seçki</p>
+              <h2 className="mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+                Öne Çıkan Ürünler
+              </h2>
+            </div>
+            <Link
+              className="group inline-flex items-center gap-2 border-b border-line-strong pb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700"
+              href="/urunler"
+            >
+              Tüm Ürünler
+              <span
+                aria-hidden="true"
+                className="transition-transform group-hover:translate-x-1"
+              >
+                →
+              </span>
+            </Link>
+          </div>
+          <div className="mt-8">
+            <ProductGrid products={featured} />
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal>
+        <section className="mt-20 border-y border-line-strong bg-ink sm:mt-28">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:py-18 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-16 lg:py-20">
+            <div>
+              <p className="eyebrow text-brass-300">Nasıl çalışır</p>
+              <h2 className="mt-4 font-display text-3xl leading-[1.05] font-semibold text-paper sm:text-4xl">
+                Tekliften
+                <span className="block text-brass-200 italic">teslime</span>
+                temiz bir süreç.
+              </h2>
+            </div>
+            <ol className="grid gap-px bg-line/15 sm:grid-cols-2">
+              {PROCESS.map((step, index) => (
+                <li className="bg-ink px-1 py-6 sm:px-4" key={step.title}>
+                  <span className="font-display text-4xl leading-none font-semibold text-brand-300/70">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <h3 className="mt-4 font-display text-lg font-semibold text-paper">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-paper/65">
+                    {step.description}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal className="mx-auto w-full max-w-7xl px-4">
+        <section className="mt-20 grid gap-8 sm:mt-28 lg:grid-cols-[minmax(0,320px)_1fr] lg:gap-16">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <p className="eyebrow">Bölüm 03 — Stok</p>
+            <h2 className="mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl">
+              Yeni Gelenler
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              Promosyon ürün gruplarına göz atın
+            <p className="mt-4 text-sm leading-6 text-ink-muted">
+              Kataloğa eklenen son ürünler. Fiyatlar teklif bazlıdır; ürün
+              kodunu belirterek ekibimizden fiyat isteyebilirsiniz.
             </p>
           </div>
-        </div>
-        <div className="mt-5">
-          <CategoryGrid categories={categoryCards} />
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
-              Öne Çıkan Ürünler
-            </h2>
-            <p className="mt-1 text-sm text-zinc-500">
-              En çok tercih edilen promosyon ürünleri
-            </p>
-          </div>
-        </div>
-        <div className="mt-5">
-          <ProductGrid products={featured} />
-        </div>
-      </section>
-
-      <section className="mt-12 grid gap-4 rounded-2xl bg-zinc-50 p-6 sm:grid-cols-2 lg:grid-cols-4">
-        {FEATURES.map((feature) => (
-          <div key={feature.title}>
-            <p className="text-sm font-bold text-zinc-900">{feature.title}</p>
-            <p className="mt-1.5 text-sm leading-6 text-zinc-600">
-              {feature.description}
-            </p>
-          </div>
-        ))}
-      </section>
+          <ProductLedger products={newArrivals} />
+        </section>
+      </Reveal>
     </div>
   );
 }

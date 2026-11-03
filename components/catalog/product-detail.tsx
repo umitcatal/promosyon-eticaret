@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { addToCartAction } from "@/app/actions/cart";
 import { ProductImage } from "@/components/catalog/product-image";
+import { primaryButtonClass } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
 
 export type ProductDetailVariant = {
@@ -24,15 +25,16 @@ function AddToCartButton({
   const { pending } = useFormStatus();
   return (
     <button
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+      className={`${primaryButtonClass} px-6 py-3.5 sm:w-auto`}
       disabled={disabled || pending}
       type="submit"
     >
       <svg
-        className="h-5 w-5"
+        aria-hidden="true"
+        className="size-4"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.6"
         viewBox="0 0 24 24"
       >
         <path
@@ -102,12 +104,13 @@ export function ProductDetail({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+    <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
       <div>
-        <div className="relative aspect-square w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+        <div className="relative aspect-square w-full overflow-hidden rounded-sm border border-line bg-surface/50">
           <ProductImage
             alt={productName}
-            className="object-contain p-6"
+            className="object-contain p-6 mix-blend-multiply"
+            fallbackClassName="flex h-full w-full items-center justify-center bg-surface font-display text-7xl font-semibold text-brass-300"
             fallbackLabel={productName}
             onError={() => {
               if (currentImage) markImageFailed(currentImage);
@@ -122,10 +125,10 @@ export function ProductDetail({
             {visibleImages.map((image, index) => (
               <button
                 aria-label={`${index + 1}. görsel`}
-                className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white transition ${
+                className={`relative size-20 shrink-0 overflow-hidden rounded-sm border bg-paper transition-colors ${
                   index === activeImage
-                    ? "border-orange-500"
-                    : "border-zinc-200 hover:border-zinc-300"
+                    ? "border-ink"
+                    : "border-line hover:border-line-strong"
                 }`}
                 key={image}
                 onClick={() => setActiveImage(index)}
@@ -133,7 +136,7 @@ export function ProductDetail({
               >
                 <ProductImage
                   alt=""
-                  className="object-contain p-1.5"
+                  className="object-contain p-1.5 mix-blend-multiply"
                   fallbackLabel={productName}
                   onError={() => markImageFailed(image)}
                   sizes="80px"
@@ -146,42 +149,38 @@ export function ProductDetail({
       </div>
 
       <div className="flex flex-col">
-        <div className="flex flex-wrap items-center gap-2">
-          {priceLabel ? (
-            <span className="text-2xl font-bold text-zinc-900">
-              {priceLabel}
-            </span>
-          ) : (
-            <span className="inline-flex rounded-full bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700">
-              Fiyat için teklif isteyin
-            </span>
-          )}
-        </div>
+        {priceLabel ? (
+          <p className="font-display text-[2rem] leading-none font-semibold text-ink">
+            {priceLabel}
+          </p>
+        ) : (
+          <p className="w-fit border-b border-brass-500 pb-1 font-mono text-[11px] tracking-[0.2em] text-brass-700 uppercase">
+            Fiyat için teklif alın
+          </p>
+        )}
 
         {selected && selected.stock !== null ? (
           selected.stock > 0 ? (
-            <p className="mt-2 text-sm font-medium text-green-700">
-              Stokta: {selected.stock.toLocaleString("tr-TR")} adet
+            <p className="mt-4 font-mono text-[11px] tracking-[0.16em] text-brand-600 uppercase">
+              Stokta · {selected.stock.toLocaleString("tr-TR")} adet
             </p>
           ) : (
-            <p className="mt-2 text-sm font-semibold text-red-600">
+            <p className="mt-4 font-mono text-[11px] tracking-[0.16em] text-red-700 uppercase">
               Seçili varyant tükendi
             </p>
           )
         ) : null}
 
         {variants.length > 1 ? (
-          <div className="mt-6">
-            <p className="text-sm font-semibold text-zinc-800">
-              Varyant seçin
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-8 border-t border-line pt-6">
+            <p className="eyebrow">Varyant seçin</p>
+            <div className="mt-4 flex flex-wrap gap-2">
               {variants.map((variant) => (
                 <button
-                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
+                  className={`rounded-sm border px-4 py-2.5 text-sm transition-colors ${
                     variant.id === selected?.id
-                      ? "border-orange-500 bg-orange-50 text-orange-700"
-                      : "border-zinc-300 bg-white text-zinc-700 hover:border-zinc-400"
+                      ? "border-ink bg-surface text-ink"
+                      : "border-line bg-paper text-ink-muted hover:border-line-strong hover:text-ink"
                   }`}
                   key={variant.id}
                   onClick={() => selectVariant(variant.id)}
@@ -189,7 +188,7 @@ export function ProductDetail({
                 >
                   {variant.name}
                   {variant.stock === 0 ? (
-                    <span className="block text-[11px] font-normal text-red-500">
+                    <span className="mt-0.5 block font-mono text-[10px] tracking-[0.14em] text-red-700 uppercase">
                       Tükendi
                     </span>
                   ) : null}
@@ -199,22 +198,22 @@ export function ProductDetail({
           </div>
         ) : null}
 
-        <div className="mt-6 flex items-center gap-4">
-          <div className="flex items-center rounded-xl border border-zinc-300">
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <div className="flex items-center rounded-sm border border-line">
             <button
               aria-label="Adet azalt"
-              className="flex h-11 w-11 items-center justify-center text-lg text-zinc-600 transition hover:text-orange-600"
+              className="flex size-11 items-center justify-center text-lg text-ink-muted transition-colors hover:text-ink"
               onClick={() => setQuantity((value) => Math.max(1, value - 1))}
               type="button"
             >
               −
             </button>
-            <span className="w-10 text-center text-sm font-semibold text-zinc-900">
+            <span className="w-12 text-center font-mono text-sm text-ink">
               {quantity}
             </span>
             <button
               aria-label="Adet artır"
-              className="flex h-11 w-11 items-center justify-center text-lg text-zinc-600 transition hover:text-orange-600"
+              className="flex size-11 items-center justify-center text-lg text-ink-muted transition-colors hover:text-ink"
               onClick={() => setQuantity((value) => Math.min(999, value + 1))}
               type="button"
             >
@@ -231,8 +230,9 @@ export function ProductDetail({
           </form>
         </div>
 
-        <div className="mt-6 rounded-2xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-600">
-          <p>
+        <div className="mt-8 border-t border-line pt-6">
+          <p className="eyebrow">Teklif süreci</p>
+          <p className="mt-3 max-w-md text-sm leading-7 text-ink-muted">
             Siparişler kurumsal teklif olarak değerlendirilir. Ekibimiz
             siparişiniz sonrasında sizinle iletişime geçer.
           </p>

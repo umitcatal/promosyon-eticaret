@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
+import { Breadcrumb, type Crumb } from "@/components/catalog/catalog-chrome";
 import {
   ProductDetail,
   type ProductDetailVariant,
@@ -34,15 +35,30 @@ export async function generateMetadata({
   };
 }
 
+function Section({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <section className="mt-12 border-t border-line pt-8">
+      <p className="eyebrow">{label}</p>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
 function ProductSkeleton() {
   return (
-    <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
-      <div className="aspect-square animate-pulse rounded-2xl bg-zinc-100" />
+    <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
+      <div className="aspect-square animate-pulse rounded-sm border border-line bg-surface/60" />
       <div className="space-y-4">
-        <div className="h-8 w-3/4 animate-pulse rounded bg-zinc-100" />
-        <div className="h-5 w-32 animate-pulse rounded bg-zinc-100" />
-        <div className="h-12 w-full animate-pulse rounded bg-zinc-100" />
-        <div className="h-24 w-full animate-pulse rounded bg-zinc-100" />
+        <div className="h-9 w-3/4 animate-pulse rounded-sm bg-surface" />
+        <div className="h-5 w-32 animate-pulse rounded-sm bg-surface" />
+        <div className="h-12 w-full animate-pulse rounded-sm bg-surface" />
+        <div className="h-24 w-full animate-pulse rounded-sm bg-surface" />
       </div>
     </div>
   );
@@ -75,80 +91,58 @@ async function ProductContent({
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+  const crumbs: Crumb[] = [
+    { href: "/", label: "Ana Sayfa" },
+    ...(parent ? [{ href: `/kategori/${parent.slug}`, label: parent.name }] : []),
+    ...(category
+      ? [{ href: `/kategori/${category.slug}`, label: category.name }]
+      : []),
+    { label: product.name },
+  ];
+
   return (
     <div>
-      <nav className="flex flex-wrap items-center gap-1.5 text-sm text-zinc-500">
-        <Link className="transition hover:text-orange-600" href="/">
-          Ana Sayfa
-        </Link>
-        {parent ? (
-          <>
-            <span>/</span>
-            <Link
-              className="transition hover:text-orange-600"
-              href={`/kategori/${parent.slug}`}
-            >
-              {parent.name}
-            </Link>
-          </>
-        ) : null}
-        {category ? (
-          <>
-            <span>/</span>
-            <Link
-              className="transition hover:text-orange-600"
-              href={`/kategori/${category.slug}`}
-            >
-              {category.name}
-            </Link>
-          </>
-        ) : null}
-        <span>/</span>
-        <span className="line-clamp-1 font-medium text-zinc-800">
-          {product.name}
-        </span>
-      </nav>
+      <Breadcrumb items={crumbs} />
 
-      <div className="mt-4 flex flex-wrap items-baseline gap-3">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
-          {product.name}
-        </h1>
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
-          Ürün Kodu: {product.code}
-        </span>
-      </div>
+      <header className="mt-7 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
+        <div className="max-w-2xl">
+          <p className="eyebrow">{category?.name ?? "Katalog"}</p>
+          <h1 className="mt-3 font-display text-[2rem] leading-[1.05] font-semibold tracking-tight text-ink text-balance sm:text-4xl">
+            {product.name}
+          </h1>
+        </div>
+        <p className="border-b border-line pb-1 font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
+          Kod {product.code}
+        </p>
+      </header>
 
-      <div className="mt-8">
+      <div className="mt-10">
         <ProductDetail productName={product.name} variants={detailVariants} />
       </div>
 
       {description ? (
-        <section className="mt-10 border-t border-zinc-200 pt-8">
-          <h2 className="text-lg font-bold text-zinc-900">Ürün Açıklaması</h2>
-          <p className="mt-3 max-w-3xl whitespace-pre-line text-sm leading-7 text-zinc-600">
+        <Section label="Ürün açıklaması">
+          <p className="max-w-3xl text-sm leading-7 whitespace-pre-line text-ink-muted">
             {description}
           </p>
-        </section>
+        </Section>
       ) : null}
 
       {hasPrintPrices ? (
-        <section className="mt-10 border-t border-zinc-200 pt-8">
+        <Section label="Baskı fiyatları">
           <div
-            className="max-w-3xl rounded-2xl border border-zinc-200 bg-zinc-50 p-5 text-sm leading-6 text-zinc-700 [&_h4]:mb-2 [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-zinc-900 [&_img]:h-auto [&_img]:max-w-full [&_p]:my-1.5"
+            className="rich-text max-w-3xl rounded-sm border border-line bg-surface/60 p-6 text-sm leading-6 text-ink-muted"
             dangerouslySetInnerHTML={{ __html: printPricesHtml }}
           />
-        </section>
+        </Section>
       ) : null}
 
       {tags.length > 0 ? (
-        <section className="mt-8">
-          <h2 className="text-sm font-bold uppercase tracking-wide text-zinc-500">
-            Etiketler
-          </h2>
-          <div className="mt-3 flex flex-wrap gap-2">
+        <Section label="Etiketler">
+          <div className="flex flex-wrap gap-2">
             {tags.map((tag) => (
               <Link
-                className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-600 transition hover:border-orange-300 hover:text-orange-700"
+                className="rounded-sm border border-line bg-paper px-3 py-1.5 font-mono text-[10px] tracking-[0.12em] text-ink-muted uppercase transition-colors hover:border-ink hover:text-ink"
                 href={`/arama?q=${encodeURIComponent(tag)}`}
                 key={tag}
               >
@@ -156,7 +150,7 @@ async function ProductContent({
               </Link>
             ))}
           </div>
-        </section>
+        </Section>
       ) : null}
     </div>
   );
@@ -164,7 +158,7 @@ async function ProductContent({
 
 export default function ProductPage(props: PageProps<"/urun/[slug]">) {
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+    <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:py-14">
       <Suspense fallback={<ProductSkeleton />}>
         <ProductContent params={props.params} />
       </Suspense>
