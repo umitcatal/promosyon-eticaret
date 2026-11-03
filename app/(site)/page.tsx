@@ -76,10 +76,6 @@ export default async function HomePage() {
                 Ürün Grupları
               </h2>
             </div>
-            <p className="max-w-sm text-sm leading-6 text-ink-muted">
-              Her grup, kurumsal baskıya uygun alternatiflerle birlikte
-              listelenir. Üzerine gelerek alt grupları görün.
-            </p>
           </div>
           <div className="mt-8">
             <CategoryIndex categories={categoryCards} />

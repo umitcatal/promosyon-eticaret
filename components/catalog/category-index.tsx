@@ -15,47 +15,44 @@ function ordinal(position: number): string {
 
 export function CategoryIndex({ categories }: { categories: CategoryCard[] }) {
   return (
-    <ol className="group/index grid gap-x-10 sm:grid-cols-2">
+    <ol className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {categories.map((category, position) => (
-        <li className="border-t border-line" key={category.id}>
+        <li key={category.id}>
           <Link
-            className="group/row relative flex items-center gap-4 py-5 transition-opacity duration-500 ease-out sm:group-hover/index:opacity-40 sm:group-hover/row:opacity-100! lg:pr-32"
+            className="group flex h-full flex-col overflow-hidden rounded-sm border border-line bg-paper transition-[border-color,box-shadow] duration-500 ease-out hover:border-ink/30 hover:shadow-[0_24px_50px_-32px_rgba(20,19,15,0.45)]"
             href={`/kategori/${category.slug}`}
           >
-            <span className="w-6 shrink-0 font-mono text-[11px] tracking-[0.16em] text-brass-600">
-              {ordinal(position)}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-display text-lg font-semibold text-ink decoration-line-strong decoration-1 underline-offset-[6px] transition-colors group-hover/row:text-brand-700 group-hover/row:underline sm:text-[1.4rem]">
-                {category.name}
-              </span>
-              {category.childCount ? (
-                <span className="mt-1 block text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-                  {category.childCount} alt grup
-                </span>
-              ) : null}
-            </span>
-            <span
-              aria-hidden="true"
-              className="shrink-0 text-ink-muted transition-all duration-500 ease-out group-hover/row:translate-x-1 group-hover/row:text-brand-600"
-            >
-              →
-            </span>
-            {category.image ? (
+            <div className="relative aspect-square w-full overflow-hidden bg-surface transition-colors duration-500 group-hover:bg-surface/70">
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute right-14 top-1/2 hidden size-24 -translate-y-1/2 scale-[0.92] overflow-hidden rounded-sm border border-line bg-surface opacity-0 shadow-[0_18px_40px_-24px_rgba(20,19,15,0.45)] transition-all duration-500 ease-out group-hover/row:scale-100 group-hover/row:opacity-100 lg:block"
+                className="absolute left-4 top-4 z-10 font-mono text-[10px] tracking-[0.2em] text-brass-700/70"
               >
-                <ProductImage
-                  alt={category.name}
-                  className="object-contain p-2 mix-blend-multiply"
-                  fallbackClassName="hidden"
-                  sizes="96px"
-                  src={category.image}
-                  unoptimized={category.image.startsWith("http")}
-                />
+                {ordinal(position)}
               </span>
-            ) : null}
+              <span
+                aria-hidden="true"
+                className="absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-full border border-line-strong bg-paper/90 text-[12px] text-ink-muted backdrop-blur-sm transition-all duration-300 ease-out group-hover:border-brand-600 group-hover:bg-brand-600 group-hover:text-paper"
+              >
+                →
+              </span>
+              <ProductImage
+                alt={category.name}
+                className="object-contain p-6 mix-blend-multiply transition-transform duration-[900ms] ease-out group-hover:scale-[1.05]"
+                sizes="(max-width: 1023px) 50vw, 25vw"
+                src={category.image}
+                unoptimized={category.image?.startsWith("http")}
+              />
+            </div>
+            <div className="flex-1 border-t border-line px-4 pt-3.5 pb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                {category.childCount
+                  ? `${category.childCount} alt grup`
+                  : "Koleksiyon"}
+              </p>
+              <h3 className="mt-1.5 line-clamp-2 font-display text-[15px] leading-snug font-semibold text-ink transition-colors group-hover:text-brand-700 sm:text-[16px]">
+                {category.name}
+              </h3>
+            </div>
           </Link>
         </li>
       ))}

@@ -137,12 +137,6 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-index-preview] {
-    transition: none;
-  }
-}
-
 .rich-text {
   color: #3f3e37;
   font-size: 0.95rem;
