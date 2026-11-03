@@ -2,6 +2,18 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/uploads/:path*",
+          destination: "/api/uploads/:path*",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   serverExternalPackages: ["better-sqlite3"],
   experimental: {
     serverActions: {

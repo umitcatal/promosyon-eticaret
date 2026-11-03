@@ -12,7 +12,7 @@ const IMAGE_EXTENSIONS = new Map([
   ["image/avif", ".avif"],
 ]);
 
-const UPLOAD_ROOT = path.join(
+export const UPLOAD_ROOT = path.join(
   process.cwd(),
   /* turbopackIgnore: true */ "public",
   "uploads"
