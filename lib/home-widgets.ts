@@ -1,6 +1,8 @@
 import type {
   HomeBannerAspect,
+  HomeBannerWidth,
   HomeProcessStep,
+  HomeSeoTextConfig,
   HomeWidgetBannerLayout,
   HomeWidgetConfig,
   HomeWidgetType,
@@ -28,6 +30,7 @@ export const HOME_WIDGET_TYPES: readonly HomeWidgetType[] = [
   "featured_products",
   "process",
   "new_products",
+  "seo_text",
 ];
 
 const TYPE_SET = new Set<string>(HOME_WIDGET_TYPES);
@@ -125,6 +128,19 @@ export const HOME_WIDGET_META: Record<HomeWidgetType, HomeWidgetMeta> = {
       item_limit: 6,
     },
   },
+  seo_text: {
+    label: "SEO Metni",
+    description:
+      "Katlanabilir arama motoru metni; sıralamada en alta taşınır.",
+    defaults: {
+      eyebrow: null,
+      title: null,
+      subtitle: null,
+      link: null,
+      link_label: null,
+      item_limit: 0,
+    },
+  },
 };
 
 export const HOME_WIDGET_TYPE_OPTIONS = HOME_WIDGET_TYPES.map((value) => ({
@@ -137,9 +153,26 @@ export const BANNER_LAYOUT_OPTIONS: readonly {
   value: HomeWidgetBannerLayout;
   label: string;
 }[] = [
-  { value: 1, label: "1'li (tam genişlik)" },
+  { value: 1, label: "1'li" },
   { value: 2, label: "2'li" },
   { value: 3, label: "3'lü" },
+];
+
+export const BANNER_WIDTH_OPTIONS: readonly {
+  value: HomeBannerWidth;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "container",
+    label: "Container alanı",
+    description: "Diğer bölümlerle aynı hizada, kenar boşluklu.",
+  },
+  {
+    value: "full",
+    label: "Tam genişlik",
+    description: "Ekranın sağ ve sol kenarlarına yaslanır.",
+  },
 ];
 
 export const BANNER_ASPECT_OPTIONS: readonly {
@@ -164,6 +197,12 @@ export const BANNER_SIZES: Record<HomeWidgetBannerLayout, string> = {
   3: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 420px",
 };
 
+export const BANNER_FULL_SIZES: Record<HomeWidgetBannerLayout, string> = {
+  1: "100vw",
+  2: "(max-width: 640px) 100vw, 50vw",
+  3: "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw",
+};
+
 const BANNER_GRID_CLASSES: Record<HomeWidgetBannerLayout, string> = {
   1: "grid grid-cols-1 gap-3 sm:gap-4",
   2: "grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4",
@@ -182,6 +221,10 @@ export function isBannerLayout(
 
 export function isBannerAspect(value: unknown): value is HomeBannerAspect {
   return value === "wide" || value === "standard" || value === "square";
+}
+
+export function isBannerWidth(value: unknown): value is HomeBannerWidth {
+  return value === "container" || value === "full";
 }
 
 export function bannerGridClass(columns: number): string {
@@ -226,6 +269,28 @@ export function normalizeProcessSteps(input: unknown): HomeProcessStep[] {
     .slice(0, 8);
 }
 
+export function normalizeSeoText(
+  input: unknown
+): HomeSeoTextConfig | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return undefined;
+  }
+
+  const record = input as { content?: unknown; collapsedByDefault?: unknown };
+  const content = typeof record.content === "string" ? record.content : "";
+  const hasVisibleText = content
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .trim() !== "";
+
+  if (!hasVisibleText) return undefined;
+
+  return {
+    content,
+    collapsedByDefault: record.collapsedByDefault === true,
+  };
+}
+
 export function parseHomeWidgetConfig(
   raw: string | null | undefined
 ): HomeWidgetConfig {
@@ -236,8 +301,15 @@ export function parseHomeWidgetConfig(
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return {};
     }
+
+    const config: HomeWidgetConfig = {};
     const steps = normalizeProcessSteps((parsed as { steps?: unknown }).steps);
-    return steps.length > 0 ? { steps } : {};
+    if (steps.length > 0) config.steps = steps;
+
+    const seo = normalizeSeoText((parsed as { seo?: unknown }).seo);
+    if (seo) config.seo = seo;
+
+    return config;
   } catch {
     return {};
   }

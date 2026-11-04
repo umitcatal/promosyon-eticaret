@@ -17,10 +17,12 @@ import {
   toggleHomeWidgetActiveAction,
   updateHomeWidgetAction,
 } from "@/app/actions/home";
+import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import { inputClass, labelClass } from "@/components/ui/styles";
 import {
   BANNER_ASPECT_OPTIONS,
   BANNER_LAYOUT_OPTIONS,
+  BANNER_WIDTH_OPTIONS,
   HOME_WIDGET_META,
   HOME_WIDGET_TYPE_OPTIONS,
 } from "@/lib/home-widgets";
@@ -139,7 +141,9 @@ function widgetTitle(widget: HomeWidgetWithBanners): string {
 function widgetSummary(widget: HomeWidgetWithBanners): string {
   switch (widget.type) {
     case "banner":
-      return `${widget.banners.length} görsel • ${widget.banner_layout}'li düzen`;
+      return `${widget.banners.length} görsel • ${widget.banner_layout}'li düzen • ${
+        widget.banner_width === "full" ? "Tam genişlik" : "Container"
+      }`;
     case "process":
       return `${widget.config.steps?.length ?? 0} adım`;
     case "categories":
@@ -149,6 +153,10 @@ function widgetSummary(widget: HomeWidgetWithBanners): string {
     case "featured_products":
     case "new_products":
       return `${widget.item_limit} ürün`;
+    case "seo_text":
+      return widget.config.seo
+        ? "Zengin metin"
+        : "İçerik boş — ana sayfada görünmez";
     default:
       return "Görseller Slider ekranından yönetilir";
   }
@@ -228,6 +236,26 @@ function AddWidgetForm() {
                 ))}
               </select>
             </div>
+            <div>
+              <label className={labelClass} htmlFor="widget-width">
+                Genişlik
+              </label>
+              <select
+                className={inputClass}
+                defaultValue="container"
+                id="widget-width"
+                name="bannerWidth"
+              >
+                {BANNER_WIDTH_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-zinc-400">
+                Tam genişlikte görseller ekranın sağ ve sol kenarına yaslanır.
+              </p>
+            </div>
           </>
         ) : null}
       </div>
@@ -262,6 +290,8 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
   const isSlider = widget.type === "slider";
   const isProcess = widget.type === "process";
   const isBanner = widget.type === "banner";
+  const isSeoText = widget.type === "seo_text";
+  const hasHeadingFields = !isSlider && !isSeoText;
   const hasItemLimit =
     widget.type === "categories" ||
     widget.type === "featured_products" ||
@@ -282,19 +312,21 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
     >
       <input name="widgetId" type="hidden" value={widget.id} />
 
-      <div>
-        <label className={labelClass} htmlFor={`eyebrow-${widget.id}`}>
-          Üst etiket
-        </label>
-        <input
-          className={inputClass}
-          defaultValue={widget.eyebrow ?? ""}
-          id={`eyebrow-${widget.id}`}
-          name="eyebrow"
-        />
-      </div>
+      {hasHeadingFields ? (
+        <div>
+          <label className={labelClass} htmlFor={`eyebrow-${widget.id}`}>
+            Üst etiket
+          </label>
+          <input
+            className={inputClass}
+            defaultValue={widget.eyebrow ?? ""}
+            id={`eyebrow-${widget.id}`}
+            name="eyebrow"
+          />
+        </div>
+      ) : null}
 
-      {!isSlider ? (
+      {hasHeadingFields ? (
         <div>
           <label className={labelClass} htmlFor={`title-${widget.id}`}>
             Başlık
@@ -318,7 +350,7 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
         </div>
       ) : null}
 
-      {!isSlider ? (
+      {hasHeadingFields ? (
         <div className="sm:col-span-2">
           <label className={labelClass} htmlFor={`subtitle-${widget.id}`}>
             Alt başlık
@@ -333,7 +365,7 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
         </div>
       ) : null}
 
-      {!isSlider && !isProcess ? (
+      {hasHeadingFields && !isProcess ? (
         <>
           <div>
             <label className={labelClass} htmlFor={`link-${widget.id}`}>
@@ -418,6 +450,26 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className={labelClass} htmlFor={`width-${widget.id}`}>
+              Genişlik
+            </label>
+            <select
+              className={inputClass}
+              defaultValue={widget.banner_width}
+              id={`width-${widget.id}`}
+              name="bannerWidth"
+            >
+              {BANNER_WIDTH_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-zinc-400">
+              Tam genişlikte görseller ekranın sağ ve sol kenarına yaslanır.
+            </p>
           </div>
         </>
       ) : null}
@@ -507,6 +559,31 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
             Slider ekranından
           </Link>{" "}
           yönetilir.
+        </div>
+      ) : null}
+
+      {isSeoText ? (
+        <div className="space-y-3 sm:col-span-2">
+          <div>
+            <p className={labelClass}>Metin</p>
+            <RichTextEditor
+              initialContent={widget.config.seo?.content ?? ""}
+              name="seoContent"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+            <input
+              className="h-4 w-4 accent-orange-600"
+              defaultChecked={widget.config.seo?.collapsedByDefault ?? true}
+              name="collapsedByDefault"
+              type="checkbox"
+            />
+            Kapalı başlasın
+          </label>
+          <p className="text-xs text-zinc-400">
+            Kapalı başladığında yalnızca metnin üst kısmı görünür, altta
+            karararak biter. İşaretsizse ana sayfada açık gelir.
+          </p>
         </div>
       ) : null}
 

@@ -10,10 +10,12 @@ import {
   HOME_WIDGET_META,
   isBannerAspect,
   isBannerLayout,
+  isBannerWidth,
   isHomeWidgetType,
   isValidHref,
   normalizeProcessSteps,
 } from "@/lib/home-widgets";
+import { sanitizeRichText } from "@/lib/sanitize";
 import type {
   HomeWidgetBanner,
   HomeWidgetRow,
@@ -56,10 +58,17 @@ export async function createHomeWidgetAction(
   const rawAspect = String(formData.get("aspect") ?? "wide");
   const aspect =
     type === "banner" && isBannerAspect(rawAspect) ? rawAspect : "wide";
+  const rawWidth = String(formData.get("bannerWidth") ?? "container");
+  const bannerWidth =
+    type === "banner" && isBannerWidth(rawWidth) ? rawWidth : "container";
   const config =
     type === "process"
       ? JSON.stringify({ steps: DEFAULT_PROCESS_STEPS })
-      : "{}";
+      : type === "seo_text"
+        ? JSON.stringify({
+            seo: { content: "", collapsedByDefault: true },
+          })
+        : "{}";
 
   try {
     db.transaction(() => {
@@ -71,8 +80,8 @@ export async function createHomeWidgetAction(
 
       db.prepare(
         `INSERT INTO home_widgets
-           (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, banner_width, item_limit, config, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
         type,
         meta.defaults.eyebrow,
@@ -82,6 +91,7 @@ export async function createHomeWidgetAction(
         meta.defaults.link_label,
         bannerLayout,
         aspect,
+        bannerWidth,
         defaultItemLimit(type),
         config,
         next
@@ -132,6 +142,9 @@ export async function updateHomeWidgetAction(
     ? existing.banner_layout
     : 1;
   let aspect = isBannerAspect(existing.aspect) ? existing.aspect : "wide";
+  let bannerWidth = isBannerWidth(existing.banner_width)
+    ? existing.banner_width
+    : "container";
 
   if (type === "banner") {
     const rawLayout = Number(formData.get("bannerLayout"));
@@ -145,6 +158,12 @@ export async function updateHomeWidgetAction(
       return { error: "Geçersiz banner oranı." };
     }
     aspect = rawAspect;
+
+    const rawWidth = String(formData.get("bannerWidth") ?? "");
+    if (!isBannerWidth(rawWidth)) {
+      return { error: "Geçersiz banner genişliği." };
+    }
+    bannerWidth = rawWidth;
   }
 
   let itemLimit = existing.item_limit;
@@ -178,14 +197,21 @@ export async function updateHomeWidgetAction(
       return { error: "En az bir süreç adımı gerekli." };
     }
     config = JSON.stringify({ steps });
+  } else if (type === "seo_text") {
+    config = JSON.stringify({
+      seo: {
+        content: sanitizeRichText(String(formData.get("seoContent") ?? "")),
+        collapsedByDefault: formData.get("collapsedByDefault") === "on",
+      },
+    });
   }
 
   try {
     db.prepare(
       `UPDATE home_widgets
        SET eyebrow = ?, title = ?, subtitle = ?, link = ?, link_label = ?,
-           banner_layout = ?, aspect = ?, item_limit = ?, config = ?,
-           updated_at = datetime('now')
+           banner_layout = ?, aspect = ?, banner_width = ?, item_limit = ?,
+           config = ?, updated_at = datetime('now')
        WHERE id = ?`
     ).run(
       eyebrow,
@@ -195,6 +221,7 @@ export async function updateHomeWidgetAction(
       linkLabel,
       bannerLayout,
       aspect,
+      bannerWidth,
       itemLimit,
       config,
       widgetId

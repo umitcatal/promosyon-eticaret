@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { loginAction, type AuthFormState } from "@/app/actions/auth";
 import {
   errorTextClass,
@@ -16,22 +16,42 @@ const initialState: AuthFormState = {};
 export function LoginForm({
   next,
   googleEnabled,
+  embedded,
+  onSwitchMode,
+  onSuccess,
 }: {
   next: string;
   googleEnabled: boolean;
+  embedded?: boolean;
+  onSwitchMode?: () => void;
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
   const nextParam = encodeURIComponent(next);
+  const onSuccessRef = useRef(onSuccess);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (!state.ok || firedRef.current) return;
+    firedRef.current = true;
+    onSuccessRef.current?.();
+  }, [state.ok]);
 
   return (
     <div className="space-y-6">
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {embedded ? <input type="hidden" name="mode" value="modal" /> : null}
         <div>
           <label className={labelClass} htmlFor="email">
             E-posta
           </label>
           <input
+            autoFocus={embedded}
             className={inputClass}
             id="email"
             name="email"
@@ -88,12 +108,22 @@ export function LoginForm({
 
       <p className="text-center text-sm text-zinc-600">
         Hesabınız yok mu?{" "}
-        <Link
-          className="font-semibold text-orange-600 hover:text-orange-700"
-          href={`/kayit?next=${nextParam}`}
-        >
-          Hemen üye olun
-        </Link>
+        {onSwitchMode ? (
+          <button
+            className="font-semibold text-orange-600 hover:text-orange-700"
+            onClick={onSwitchMode}
+            type="button"
+          >
+            Hemen üye olun
+          </button>
+        ) : (
+          <Link
+            className="font-semibold text-orange-600 hover:text-orange-700"
+            href={`/kayit?next=${nextParam}`}
+          >
+            Hemen üye olun
+          </Link>
+        )}
       </p>
     </div>
   );

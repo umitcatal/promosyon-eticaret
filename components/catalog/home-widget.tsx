@@ -9,9 +9,11 @@ import {
   ProductLedger,
 } from "@/components/catalog/product-card";
 import { HeroFallback, Slider } from "@/components/catalog/slider";
+import { SeoTextBlock } from "@/components/catalog/seo-text-block";
 import { Reveal } from "@/components/motion/reveal";
 import {
   BANNER_ASPECTS,
+  BANNER_FULL_SIZES,
   BANNER_SIZES,
   bannerGridClass,
 } from "@/lib/home-widgets";
@@ -22,6 +24,7 @@ import {
   getNewProducts,
   getSliderItems,
 } from "@/lib/queries";
+import { sanitizeRichText } from "@/lib/sanitize";
 import type {
   HomeWidgetBanner,
   HomeWidgetWithBanners,
@@ -332,15 +335,22 @@ function BannerWidget({ widget }: { widget: HomeWidgetWithBanners }) {
     banners.length
   ) as 1 | 2 | 3;
   const aspect = BANNER_ASPECTS[widget.aspect] ?? BANNER_ASPECTS.wide;
+  const isFull = widget.banner_width === "full";
   const hasHeader = Boolean(
     widget.eyebrow || widget.title || widget.subtitle || widget.link
   );
 
   return (
-    <Reveal className="mx-auto w-full max-w-7xl px-4">
+    <Reveal
+      className={isFull ? "w-full" : "mx-auto w-full max-w-7xl px-4"}
+    >
       <section className="mt-16 sm:mt-24">
         {hasHeader ? (
-          <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <div
+            className={`flex flex-wrap items-end justify-between gap-x-8 gap-y-3 ${
+              isFull ? "mx-auto max-w-7xl px-4" : ""
+            }`}
+          >
             <WidgetHeading widget={widget} />
             <WidgetLink label={widget.link_label} link={widget.link} />
           </div>
@@ -354,10 +364,29 @@ function BannerWidget({ widget }: { widget: HomeWidgetWithBanners }) {
               banner={banner}
               fallbackAlt={widget.title ?? "Banner"}
               key={banner.id}
-              sizes={BANNER_SIZES[columns]}
+              sizes={
+                isFull ? BANNER_FULL_SIZES[columns] : BANNER_SIZES[columns]
+              }
             />
           ))}
         </div>
+      </section>
+    </Reveal>
+  );
+}
+
+function SeoTextWidget({ widget }: { widget: HomeWidgetWithBanners }) {
+  const seo = widget.config.seo;
+  if (!seo) return null;
+
+  return (
+    <Reveal className="mx-auto w-full max-w-7xl px-4">
+      <section className="mt-16 border-t border-line pt-8 sm:mt-24 sm:pt-10">
+        <SeoTextBlock
+          collapsedByDefault={seo.collapsedByDefault}
+          html={sanitizeRichText(seo.content)}
+          id={widget.id}
+        />
       </section>
     </Reveal>
   );
@@ -381,6 +410,8 @@ export async function HomeWidgetSection({
       return <NewProductsWidget widget={widget} />;
     case "banner":
       return <BannerWidget widget={widget} />;
+    case "seo_text":
+      return <SeoTextWidget widget={widget} />;
     default:
       return null;
   }

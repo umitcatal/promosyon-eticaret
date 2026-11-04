@@ -8,7 +8,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 import { safeNextPath } from "@/lib/url";
 import { createUser, findUserByEmail } from "@/lib/users";
 
-export type AuthFormState = { error?: string };
+export type AuthFormState = { error?: string; ok?: boolean };
 
 const signupSchema = z.object({
   firstName: z.string().trim().min(2, "Adınızı girin"),
@@ -65,6 +65,7 @@ export async function signupAction(
     passwordHash: hashPassword(password),
   });
   await startSession(userId);
+  if (formData.get("mode") === "modal") return { ok: true };
   redirect(safeNextPath(formData.get("next")));
 }
 
@@ -86,6 +87,7 @@ export async function loginAction(
   }
 
   await startSession(user.id);
+  if (formData.get("mode") === "modal") return { ok: true };
   redirect(safeNextPath(formData.get("next")));
 }
 

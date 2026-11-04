@@ -55,8 +55,8 @@ async function SearchContent({
         </>
       ) : (
         <p className="mt-8 max-w-lg text-sm leading-7 text-ink-muted">
-          Ürün adı, kategori veya ürün kodu ile arayabilirsiniz. Aramanız
-          bulunduğunuz kategorideki tüm alt grupları kapsar.
+          Ürün adı, ürün kodu veya etiketlerle arayabilirsiniz. En az 2 karakter
+          girin.
         </p>
       )}
     </div>

@@ -1,12 +1,15 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { db, getSetting } from "./db";
+import { firstImage } from "./format";
 import {
   clampItemLimit,
   isBannerAspect,
   isBannerLayout,
+  isBannerWidth,
   isHomeWidgetType,
   parseHomeWidgetConfig,
 } from "./home-widgets";
+import { normalizeSearchQuery, toLikePattern } from "./search-fold";
 import type {
   Category,
   CategoryNode,
@@ -19,6 +22,9 @@ import type {
   Page,
   ProductListItem,
   ProductRow,
+  SearchCategoryItem,
+  SearchProductItem,
+  SearchTypeaheadResult,
   SliderItem,
   VariantRow,
 } from "./types";
@@ -26,7 +32,7 @@ import { parseVatRate, VAT_RATE_SETTING_KEY } from "./vat";
 
 export const PAGE_SIZE = 12;
 
-const PRODUCT_LIST_COLUMNS = `
+export const PRODUCT_LIST_COLUMNS = `
   p.*,
   (SELECT MIN(v.price) FROM variants v
     WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS min_price,
@@ -38,6 +44,26 @@ const PRODUCT_LIST_COLUMNS = `
     WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
     ORDER BY v.id LIMIT 1) AS first_images
 `;
+
+const SEARCH_PRODUCT_COLUMNS = `
+  p.id, p.code, p.name, p.slug,
+  (SELECT MIN(v.price) FROM variants v
+    WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS min_price,
+  (SELECT MAX(v.price) FROM variants v
+    WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS max_price,
+  (SELECT v.images FROM variants v
+    WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
+    ORDER BY v.id LIMIT 1) AS first_images
+`;
+
+const PRODUCT_SEARCH_WHERE = `p.active = 1 AND p.is_hidden = 0 AND (
+  tr_fold(p.name) LIKE ? ESCAPE '\\' OR tr_fold(p.code) LIKE ? ESCAPE '\\'
+)`;
+
+const PRODUCT_SEARCH_WHERE_WITH_TAGS = `p.active = 1 AND p.is_hidden = 0 AND (
+  tr_fold(p.name) LIKE ? ESCAPE '\\' OR tr_fold(p.code) LIKE ? ESCAPE '\\'
+  OR tr_fold(p.tags) LIKE ? ESCAPE '\\'
+)`;
 
 const SORT_OPTIONS: Record<string, string> = {
   newest: "p.id DESC",
@@ -56,7 +82,7 @@ function normalizePage(page: number | undefined): number {
   return Math.floor(page);
 }
 
-function mapProductListRow(row: Record<string, unknown>): ProductListItem {
+export function mapProductListRow(row: Record<string, unknown>): ProductListItem {
   const firstImages = row.first_images as string | null;
   let image: string | null = null;
   if (firstImages) {
@@ -75,6 +101,18 @@ function mapProductListRow(row: Record<string, unknown>): ProductListItem {
     min_price: (row.min_price as number | null) ?? null,
     max_price: (row.max_price as number | null) ?? null,
     variant_count: (row.variant_count as number) ?? 0,
+  };
+}
+
+function mapSearchProductRow(row: Record<string, unknown>): SearchProductItem {
+  return {
+    id: row.id as number,
+    code: row.code as string,
+    name: row.name as string,
+    slug: row.slug as string,
+    image: firstImage(row.first_images as string | null),
+    min_price: (row.min_price as number | null) ?? null,
+    max_price: (row.max_price as number | null) ?? null,
   };
 }
 
@@ -513,29 +551,26 @@ export async function searchProducts(
   cacheLife("hours");
   cacheTag("catalog");
 
-  const trimmed = query.trim();
+  const trimmed = normalizeSearchQuery(query);
   if (trimmed.length < 2) {
     return { items: [], total: 0, page: 1, pageSize: PAGE_SIZE };
   }
 
-  const escaped = trimmed.replace(/[%_\\]/g, "\\$&");
-  const pattern = `%${escaped}%`;
+  const pattern = toLikePattern(trimmed);
   const page = normalizePage(options.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const where = `p.active = 1 AND p.is_hidden = 0 AND (
-    p.name LIKE ? ESCAPE '\\' OR p.code LIKE ? ESCAPE '\\' OR p.tags LIKE ? ESCAPE '\\'
-  )`;
-
   const totalRow = db
-    .prepare(`SELECT COUNT(*) AS total FROM products p WHERE ${where}`)
+    .prepare(
+      `SELECT COUNT(*) AS total FROM products p WHERE ${PRODUCT_SEARCH_WHERE_WITH_TAGS}`
+    )
     .get(pattern, pattern, pattern) as { total: number };
 
   const rows = db
     .prepare(
       `SELECT ${PRODUCT_LIST_COLUMNS}
        FROM products p
-       WHERE ${where}
+       WHERE ${PRODUCT_SEARCH_WHERE_WITH_TAGS}
        ORDER BY p.is_featured DESC, p.id DESC
        LIMIT ? OFFSET ?`
     )
@@ -549,6 +584,57 @@ export async function searchProducts(
     total: totalRow.total,
     page,
     pageSize: PAGE_SIZE,
+  };
+}
+
+export async function searchTypeahead(
+  query: string,
+  options: { productLimit?: number } = {}
+): Promise<SearchTypeaheadResult> {
+  const trimmed = normalizeSearchQuery(query);
+  if (trimmed.length < 2) {
+    return { query: trimmed, products: [], productTotal: 0, categories: [] };
+  }
+
+  const pattern = toLikePattern(trimmed);
+  const productLimit = Math.min(
+    Math.max(Math.floor(options.productLimit ?? 8), 1),
+    12
+  );
+
+  const totalRow = db
+    .prepare(
+      `SELECT COUNT(*) AS total FROM products p WHERE ${PRODUCT_SEARCH_WHERE}`
+    )
+    .get(pattern, pattern) as { total: number };
+
+  const productRows = db
+    .prepare(
+      `SELECT ${SEARCH_PRODUCT_COLUMNS}
+       FROM products p
+       WHERE ${PRODUCT_SEARCH_WHERE}
+       ORDER BY p.is_featured DESC, p.id DESC
+       LIMIT ?`
+    )
+    .all(pattern, pattern, productLimit) as Record<string, unknown>[];
+
+  const categories = db
+    .prepare(
+      `SELECT c.id, c.name, c.slug, parent.name AS parent_name
+       FROM categories c
+       LEFT JOIN categories parent ON parent.id = c.parent_id AND parent.active = 1
+       WHERE c.active = 1 AND (
+         tr_fold(c.name) LIKE ? ESCAPE '\\' OR tr_fold(c.slug) LIKE ? ESCAPE '\\'
+       )
+       ORDER BY (parent.id IS NULL) DESC, c.sort_order, c.name`
+    )
+    .all(pattern, pattern) as SearchCategoryItem[];
+
+  return {
+    query: trimmed,
+    products: productRows.map(mapSearchProductRow),
+    productTotal: totalRow.total,
+    categories,
   };
 }
 
@@ -605,6 +691,9 @@ export function fetchHomeWidgets(
         ? row.banner_layout
         : 1,
       aspect: isBannerAspect(row.aspect) ? row.aspect : "wide",
+      banner_width: isBannerWidth(row.banner_width)
+        ? row.banner_width
+        : "container",
       item_limit: clampItemLimit(row.item_limit, 0, 0, 24),
       config: parseHomeWidgetConfig(row.config),
       banners: grouped.get(row.id) ?? [],

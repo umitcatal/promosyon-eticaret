@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { countFavorites } from "@/lib/favorites";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import { statusColor, statusLabel, type OrderRow } from "@/lib/orders";
 
@@ -24,6 +25,8 @@ export default async function AccountPage() {
       .prepare("SELECT COUNT(*) AS total FROM orders WHERE user_id = ?")
       .get(user.id) as { total: number }
   ).total;
+
+  const favoriteCount = countFavorites(user.id);
 
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
@@ -56,6 +59,12 @@ export default async function AccountPage() {
               href="/hesabim/siparisler"
             >
               Siparişlerim ({orderCount})
+            </Link>
+            <Link
+              className="block rounded-lg px-3 py-2 text-zinc-700 transition hover:bg-zinc-50"
+              href="/hesabim/favoriler"
+            >
+              Favorilerim ({favoriteCount})
             </Link>
             {user.role === "admin" ? (
               <Link

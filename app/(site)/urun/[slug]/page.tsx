@@ -7,6 +7,7 @@ import {
   ProductDetail,
   type ProductDetailVariant,
 } from "@/components/catalog/product-detail";
+import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { getProductBySlug } from "@/lib/queries";
 
@@ -111,9 +112,12 @@ async function ProductContent({
             {product.name}
           </h1>
         </div>
-        <p className="border-b border-line pb-1 font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
-          Kod {product.code}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="border-b border-line pb-1 font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
+            Kod {product.code}
+          </p>
+          <FavoriteButton productId={product.id} showLabel />
+        </div>
       </header>
 
       <div className="mt-10">

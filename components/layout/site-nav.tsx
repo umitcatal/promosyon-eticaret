@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/catalog/product-image";
+import { useSearch } from "@/components/search/search-provider";
 import type { CategoryNode, MenuNavItem } from "@/lib/types";
 
 function ordinal(position: number): string {
@@ -98,9 +99,12 @@ export function SiteNav({
   const [menuGroupsOpen, setMenuGroupsOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const { open: searchOpen } = useSearch();
+  const visibleOpenId = searchOpen ? null : openId;
+  const drawerVisible = drawerOpen && !searchOpen;
 
   const openItem = items.find(
-    (item) => item.id === openId && item.type === "categories"
+    (item) => item.id === visibleOpenId && item.type === "categories"
   );
   const activeTop =
     categories.find((category) => category.id === activeTopId) ??
@@ -120,6 +124,7 @@ export function SiteNav({
   }
 
   function openMega(item: MenuNavItem) {
+    if (searchOpen) return;
     cancelClose();
     setOpenId(item.id);
     setActiveTopId((current) => current ?? categories[0]?.id ?? null);
@@ -141,13 +146,13 @@ export function SiteNav({
   }
 
   useEffect(() => {
-    if (!drawerOpen) return;
+    if (!drawerVisible) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [drawerOpen]);
+  }, [drawerVisible]);
 
   return (
     <div
@@ -159,7 +164,7 @@ export function SiteNav({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 md:hidden">
         <button
           aria-controls="mobile-menu"
-          aria-expanded={drawerOpen}
+          aria-expanded={drawerVisible}
           className="inline-flex items-center gap-2.5 font-mono text-[11px] uppercase tracking-[0.2em] text-ink"
           onClick={() => setDrawerOpen((current) => !current)}
           ref={menuButtonRef}
@@ -188,10 +193,10 @@ export function SiteNav({
           {items.map((item) =>
             item.type === "categories" ? (
               <Link
-                aria-expanded={openId === item.id}
+                aria-expanded={visibleOpenId === item.id}
                 aria-haspopup="true"
                 className={`group relative px-3 py-3 text-[13px] font-medium tracking-wide transition-colors focus:outline-none ${
-                  openId === item.id
+                  visibleOpenId === item.id
                     ? "text-ink"
                     : "text-ink-muted hover:text-ink focus:text-ink"
                 }`}
@@ -204,7 +209,7 @@ export function SiteNav({
                 {item.label}
                 <span
                   className={`absolute inset-x-3 bottom-2 h-px origin-left bg-brass-500 transition-transform duration-300 ease-out ${
-                    openId === item.id
+                    visibleOpenId === item.id
                       ? "scale-x-100"
                       : "scale-x-0 group-hover:scale-x-100 group-focus-visible:scale-x-100"
                   }`}
@@ -320,7 +325,7 @@ export function SiteNav({
       </div>
 
       <AnimatePresence>
-        {drawerOpen ? (
+        {drawerVisible ? (
           <div className="fixed inset-0 z-50 md:hidden" id="mobile-menu">
             <motion.div
               animate={{ opacity: 1 }}

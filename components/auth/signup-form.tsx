@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useCallback, useState } from "react";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { signupAction, type AuthFormState } from "@/app/actions/auth";
 import { Turnstile } from "@/components/auth/turnstile";
 import {
@@ -18,10 +18,16 @@ export function SignupForm({
   next,
   googleEnabled,
   turnstileSiteKey,
+  embedded,
+  onSwitchMode,
+  onSuccess,
 }: {
   next: string;
   googleEnabled: boolean;
   turnstileSiteKey: string;
+  embedded?: boolean;
+  onSwitchMode?: () => void;
+  onSuccess?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(
     signupAction,
@@ -35,17 +41,31 @@ export function SignupForm({
     setTurnstileToken(token);
   }, []);
   const nextParam = encodeURIComponent(next);
+  const onSuccessRef = useRef(onSuccess);
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
+  useEffect(() => {
+    if (!state.ok || firedRef.current) return;
+    firedRef.current = true;
+    onSuccessRef.current?.();
+  }, [state.ok]);
 
   return (
     <div className="space-y-6">
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
+        {embedded ? <input type="hidden" name="mode" value="modal" /> : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="firstName">
               Ad
             </label>
             <input
+              autoFocus={embedded}
               className={inputClass}
               id="firstName"
               name="firstName"
@@ -139,12 +159,22 @@ export function SignupForm({
 
       <p className="text-center text-sm text-zinc-600">
         Zaten hesabınız var mı?{" "}
-        <Link
-          className="font-semibold text-orange-600 hover:text-orange-700"
-          href={`/giris?next=${nextParam}`}
-        >
-          Giriş yapın
-        </Link>
+        {onSwitchMode ? (
+          <button
+            className="font-semibold text-orange-600 hover:text-orange-700"
+            onClick={onSwitchMode}
+            type="button"
+          >
+            Giriş yapın
+          </button>
+        ) : (
+          <Link
+            className="font-semibold text-orange-600 hover:text-orange-700"
+            href={`/giris?next=${nextParam}`}
+          >
+            Giriş yapın
+          </Link>
+        )}
       </p>
     </div>
   );

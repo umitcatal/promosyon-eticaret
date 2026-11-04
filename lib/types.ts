@@ -104,19 +104,28 @@ export type HomeWidgetType =
   | "featured_products"
   | "process"
   | "new_products"
-  | "banner";
+  | "banner"
+  | "seo_text";
 
 export type HomeWidgetBannerLayout = 1 | 2 | 3;
 
 export type HomeBannerAspect = "wide" | "standard" | "square";
+
+export type HomeBannerWidth = "container" | "full";
 
 export type HomeProcessStep = {
   title: string;
   description: string;
 };
 
+export type HomeSeoTextConfig = {
+  content: string;
+  collapsedByDefault: boolean;
+};
+
 export type HomeWidgetConfig = {
   steps?: HomeProcessStep[];
+  seo?: HomeSeoTextConfig;
 };
 
 export type HomeWidgetBanner = {
@@ -140,6 +149,7 @@ export type HomeWidget = {
   link_label: string | null;
   banner_layout: HomeWidgetBannerLayout;
   aspect: HomeBannerAspect;
+  banner_width: HomeBannerWidth;
   item_limit: number;
   config: HomeWidgetConfig;
   sort_order: number;
@@ -154,10 +164,35 @@ export type HomeWidgetWithBanners = HomeWidget & {
 
 export type HomeWidgetRow = Omit<
   HomeWidget,
-  "type" | "banner_layout" | "aspect" | "config"
+  "type" | "banner_layout" | "aspect" | "banner_width" | "config"
 > & {
   type: string;
   banner_layout: number;
   aspect: string;
+  banner_width: string;
   config: string;
+};
+
+export type SearchProductItem = {
+  id: number;
+  code: string;
+  name: string;
+  slug: string;
+  image: string | null;
+  min_price: number | null;
+  max_price: number | null;
+};
+
+export type SearchCategoryItem = {
+  id: number;
+  name: string;
+  slug: string;
+  parent_name: string | null;
+};
+
+export type SearchTypeaheadResult = {
+  query: string;
+  products: SearchProductItem[];
+  productTotal: number;
+  categories: SearchCategoryItem[];
 };

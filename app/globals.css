@@ -234,6 +234,31 @@ body {
   padding: 0;
 }
 
+/*
+ * SEO copy keeps its full markup in the DOM for crawlers and only clips the
+ * visual box, so the reveal needs no height measurement. Where the browser
+ * can interpolate keywords the release animates; elsewhere it snaps.
+ */
+[data-seo-collapse] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
+  interpolate-size: allow-keywords;
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 96%);
+  max-height: 9rem;
+  overflow: hidden;
+}
+
+[data-seo-collapse][data-seo-open="true"] {
+  -webkit-mask-image: none;
+  mask-image: none;
+  max-height: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-seo-collapse] {
+    transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 /* The catalog index scrolls on its own once expanded groups outgrow the viewport. */
 .catalog-sidebar {
   scrollbar-color: var(--color-line-strong) transparent;
@@ -251,5 +276,24 @@ body {
 }
 
 .catalog-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-scroll {
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.search-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.search-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+
+.search-scroll::-webkit-scrollbar-track {
   background: transparent;
 }

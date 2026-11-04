@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { DEFAULT_PROCESS_STEPS } from "./home-widgets";
+import { foldTr } from "./search-fold";
 
 const dbPath =
   process.env.DB_PATH ?? path.join(process.cwd(), "data", "promosyon.db");
@@ -22,6 +23,8 @@ globalForDb.__promosyonDb = db;
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 db.pragma("busy_timeout = 5000");
+
+db.function("tr_fold", { deterministic: true }, foldTr);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS categories (
@@ -81,6 +84,14 @@ db.exec(`
     google_id TEXT UNIQUE,
     role TEXT NOT NULL DEFAULT 'customer',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS favorites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, product_id)
   );
 
   CREATE TABLE IF NOT EXISTS orders (
@@ -156,6 +167,7 @@ db.exec(`
     link_label TEXT,
     banner_layout INTEGER NOT NULL DEFAULT 1,
     aspect TEXT NOT NULL DEFAULT 'wide',
+    banner_width TEXT NOT NULL DEFAULT 'container',
     item_limit INTEGER NOT NULL DEFAULT 0,
     config TEXT NOT NULL DEFAULT '{}',
     sort_order INTEGER NOT NULL DEFAULT 0,
@@ -181,7 +193,7 @@ db.exec(`
 `);
 
 function ensureColumn(
-  table: "categories" | "orders" | "products" | "variants",
+  table: "categories" | "home_widgets" | "orders" | "products" | "variants",
   column: string,
   definition: string
 ): boolean {
@@ -214,6 +226,11 @@ ensureColumn("variants", "net_price", "REAL");
 ensureColumn("variants", "discount", "REAL");
 ensureColumn("variants", "stock", "INTEGER");
 ensureColumn("orders", "idempotency_key", "TEXT");
+ensureColumn(
+  "home_widgets",
+  "banner_width",
+  "TEXT NOT NULL DEFAULT 'container'"
+);
 
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_user_idempotency
