@@ -227,7 +227,7 @@ function ResultsFooter({ mobile }: { mobile: boolean }) {
       }`}
     >
       <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-        Ürün adı veya kodu · en az 2 karakter
+        Ürün adı veya kodu
       </p>
       <Link
         aria-selected={active}
