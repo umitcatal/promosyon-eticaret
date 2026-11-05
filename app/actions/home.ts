@@ -53,6 +53,9 @@ function readCollectionConfig(
     perViewDesktop: Number(formData.get("perViewDesktop") ?? 4),
     perViewMobile: Number(formData.get("perViewMobile") ?? 2),
     mobileLayout: String(formData.get("mobileLayout") ?? "slider"),
+    autoplay: formData.get("autoplay") === "on",
+    autoplayInterval: Number(formData.get("autoplayInterval") ?? 5),
+    slideStep: String(formData.get("slideStep") ?? "page"),
   });
 }
 

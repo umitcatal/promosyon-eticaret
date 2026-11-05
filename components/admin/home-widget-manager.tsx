@@ -23,9 +23,13 @@ import {
   BANNER_ASPECT_OPTIONS,
   BANNER_LAYOUT_OPTIONS,
   BANNER_WIDTH_OPTIONS,
+  COLLECTION_AUTOPLAY_DEFAULT,
+  COLLECTION_AUTOPLAY_MAX,
+  COLLECTION_AUTOPLAY_MIN,
   COLLECTION_DESKTOP_OPTIONS,
   COLLECTION_MOBILE_LAYOUT_OPTIONS,
   COLLECTION_MOBILE_OPTIONS,
+  COLLECTION_SLIDE_STEP_OPTIONS,
   HOME_WIDGET_META,
   HOME_WIDGET_TYPE_OPTIONS,
 } from "@/lib/home-widgets";
@@ -164,9 +168,13 @@ function widgetSummary(
       const config = widget.config.collection;
       const name = collectionName ?? "Koleksiyon seçilmedi";
       if (!config) return name;
+      const step = config.slideStep === "item" ? "tek tek" : "sayfa halinde";
+      const autoplay = config.autoplay
+        ? ` • oto ${config.autoplayInterval}sn`
+        : "";
       return `${name} • ${widget.item_limit} ürün • ${config.perViewDesktop}'lü${
         config.mobileLayout === "grid" ? " • mobil grid" : " • mobil slider"
-      }`;
+      } • ${step}${autoplay}`;
     }
     case "seo_text":
       return widget.config.seo
@@ -362,6 +370,59 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+                <input
+                  className="h-4 w-4 accent-orange-600"
+                  name="autoplay"
+                  type="checkbox"
+                />
+                Otomatik oynatma
+              </label>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label
+                    className={labelClass}
+                    htmlFor="widget-collection-autoplay-interval"
+                  >
+                    Oynatma aralığı (saniye)
+                  </label>
+                  <input
+                    className={inputClass}
+                    defaultValue={COLLECTION_AUTOPLAY_DEFAULT}
+                    id="widget-collection-autoplay-interval"
+                    max={COLLECTION_AUTOPLAY_MAX}
+                    min={COLLECTION_AUTOPLAY_MIN}
+                    name="autoplayInterval"
+                    type="number"
+                  />
+                </div>
+                <div>
+                  <label
+                    className={labelClass}
+                    htmlFor="widget-collection-step"
+                  >
+                    Kaydırma adımı
+                  </label>
+                  <select
+                    className={inputClass}
+                    defaultValue="page"
+                    id="widget-collection-step"
+                    name="slideStep"
+                  >
+                    {COLLECTION_SLIDE_STEP_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-zinc-400">
+                Otomatik oynatma yalnızca slider görünümünde çalışır; fare
+                üzerine gelince ve dokunulduğunda duraklar.
+              </p>
             </div>
           </>
         ) : null}
@@ -619,6 +680,63 @@ function WidgetEditForm({
                 </option>
               ))}
             </select>
+          </div>
+          <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+              <input
+                className="h-4 w-4 accent-orange-600"
+                defaultChecked={collectionConfig?.autoplay === true}
+                name="autoplay"
+                type="checkbox"
+              />
+              Otomatik oynatma
+            </label>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label
+                  className={labelClass}
+                  htmlFor={`collection-autoplay-interval-${widget.id}`}
+                >
+                  Oynatma aralığı (saniye)
+                </label>
+                <input
+                  className={inputClass}
+                  defaultValue={
+                    collectionConfig?.autoplayInterval ??
+                    COLLECTION_AUTOPLAY_DEFAULT
+                  }
+                  id={`collection-autoplay-interval-${widget.id}`}
+                  max={COLLECTION_AUTOPLAY_MAX}
+                  min={COLLECTION_AUTOPLAY_MIN}
+                  name="autoplayInterval"
+                  type="number"
+                />
+              </div>
+              <div>
+                <label
+                  className={labelClass}
+                  htmlFor={`collection-step-${widget.id}`}
+                >
+                  Kaydırma adımı
+                </label>
+                <select
+                  className={inputClass}
+                  defaultValue={collectionConfig?.slideStep ?? "page"}
+                  id={`collection-step-${widget.id}`}
+                  name="slideStep"
+                >
+                  {COLLECTION_SLIDE_STEP_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-zinc-400">
+              Otomatik oynatma yalnızca slider görünümünde çalışır; fare
+              üzerine gelince ve dokunulduğunda duraklar.
+            </p>
           </div>
         </>
       ) : null}

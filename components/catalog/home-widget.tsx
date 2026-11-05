@@ -421,7 +421,14 @@ async function CollectionWidget({
           <WidgetLink label={label} link={link} />
         </div>
         <div className="mt-8">
-          <CarouselShell className={listClassName} label={title}>
+          <CarouselShell
+            arrowsOnMobile={config.mobileLayout === "slider"}
+            autoplay={config.autoplay}
+            autoplayInterval={config.autoplayInterval}
+            className={listClassName}
+            label={title}
+            step={config.slideStep}
+          >
             {items.map((product) => (
               <li className={itemClassName} key={product.id}>
                 <ProductCard product={product} sizes={sizes} />

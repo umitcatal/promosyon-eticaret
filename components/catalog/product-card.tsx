@@ -36,7 +36,7 @@ export function ProductCard({
           <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted">
             {product.code}
           </p>
-          <h3 className="line-clamp-2 font-display text-[16px] leading-snug font-semibold text-ink decoration-line-strong decoration-1 underline-offset-4 transition group-hover:underline">
+          <h3 className="line-clamp-2 min-h-[2.75rem] font-display text-[16px] leading-snug font-semibold text-ink decoration-line-strong decoration-1 underline-offset-4 transition group-hover:underline">
             {product.name}
           </h3>
           <div className="mt-auto pt-3">

@@ -159,11 +159,16 @@ export type HomeSeoTextConfig = {
   collapsedByDefault: boolean;
 };
 
+export type CollectionSlideStep = "page" | "item";
+
 export type CollectionWidgetConfig = {
   collectionId: number;
   perViewDesktop: 4 | 5 | 6;
   perViewMobile: 1 | 2 | 3;
   mobileLayout: "slider" | "grid";
+  autoplay: boolean;
+  autoplayInterval: number;
+  slideStep: CollectionSlideStep;
 };
 
 export type HomeWidgetConfig = {

@@ -1,4 +1,5 @@
 import type {
+  CollectionSlideStep,
   CollectionWidgetConfig,
   HomeBannerAspect,
   HomeBannerWidth,
@@ -225,6 +226,18 @@ export const COLLECTION_MOBILE_LAYOUT_OPTIONS: readonly {
   { value: "grid", label: "Statik grid" },
 ];
 
+export const COLLECTION_SLIDE_STEP_OPTIONS: readonly {
+  value: CollectionSlideStep;
+  label: string;
+}[] = [
+  { value: "page", label: "Sayfa halinde" },
+  { value: "item", label: "Tek tek" },
+];
+
+export const COLLECTION_AUTOPLAY_MIN = 2;
+export const COLLECTION_AUTOPLAY_MAX = 30;
+export const COLLECTION_AUTOPLAY_DEFAULT = 5;
+
 export const COLLECTION_DESKTOP_WIDTH: Record<4 | 5 | 6, string> = {
   4: "lg:w-[calc((100%-3rem)/4)]",
   5: "lg:w-[calc((100%-4rem)/5)]",
@@ -372,6 +385,21 @@ export function isCollectionMobileLayout(
   return value === "slider" || value === "grid";
 }
 
+export function isCollectionSlideStep(
+  value: unknown
+): value is CollectionSlideStep {
+  return value === "item" || value === "page";
+}
+
+export function clampAutoplayInterval(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return COLLECTION_AUTOPLAY_DEFAULT;
+  return Math.min(
+    COLLECTION_AUTOPLAY_MAX,
+    Math.max(COLLECTION_AUTOPLAY_MIN, Math.trunc(parsed))
+  );
+}
+
 export function normalizeCollectionConfig(
   input: unknown
 ): CollectionWidgetConfig | undefined {
@@ -384,6 +412,9 @@ export function normalizeCollectionConfig(
     perViewDesktop?: unknown;
     perViewMobile?: unknown;
     mobileLayout?: unknown;
+    autoplay?: unknown;
+    autoplayInterval?: unknown;
+    slideStep?: unknown;
   };
   const collectionId = Number(record.collectionId);
   if (!Number.isInteger(collectionId) || collectionId <= 0) return undefined;
@@ -397,8 +428,21 @@ export function normalizeCollectionConfig(
   const mobileLayout = isCollectionMobileLayout(record.mobileLayout)
     ? record.mobileLayout
     : "slider";
+  const autoplay = record.autoplay === true;
+  const autoplayInterval = clampAutoplayInterval(record.autoplayInterval);
+  const slideStep = isCollectionSlideStep(record.slideStep)
+    ? record.slideStep
+    : "page";
 
-  return { collectionId, perViewDesktop, perViewMobile, mobileLayout };
+  return {
+    collectionId,
+    perViewDesktop,
+    perViewMobile,
+    mobileLayout,
+    autoplay,
+    autoplayInterval,
+    slideStep,
+  };
 }
 
 export function parseHomeWidgetConfig(
