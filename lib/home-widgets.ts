@@ -1,4 +1,5 @@
 import type {
+  CollectionWidgetConfig,
   HomeBannerAspect,
   HomeBannerWidth,
   HomeProcessStep,
@@ -25,6 +26,7 @@ export type HomeWidgetMeta = {
 
 export const HOME_WIDGET_TYPES: readonly HomeWidgetType[] = [
   "banner",
+  "collection",
   "slider",
   "categories",
   "featured_products",
@@ -77,6 +79,19 @@ export const HOME_WIDGET_META: Record<HomeWidgetType, HomeWidgetMeta> = {
       link: null,
       link_label: null,
       item_limit: 8,
+    },
+  },
+  collection: {
+    label: "Koleksiyon",
+    description:
+      "Seçili koleksiyonun ürünleri; masaüstünde slider, mobilde slider veya grid.",
+    defaults: {
+      eyebrow: null,
+      title: null,
+      subtitle: null,
+      link: null,
+      link_label: "Tümünü gör",
+      item_limit: 20,
     },
   },
   categories: {
@@ -183,6 +198,56 @@ export const BANNER_ASPECT_OPTIONS: readonly {
   { value: "standard", label: "Standart (16:9)" },
   { value: "square", label: "Kare (1:1)" },
 ];
+
+export const COLLECTION_DESKTOP_OPTIONS: readonly {
+  value: 4 | 5 | 6;
+  label: string;
+}[] = [
+  { value: 4, label: "4'lü" },
+  { value: 5, label: "5'li" },
+  { value: 6, label: "6'lı" },
+];
+
+export const COLLECTION_MOBILE_OPTIONS: readonly {
+  value: 1 | 2 | 3;
+  label: string;
+}[] = [
+  { value: 1, label: "1'li" },
+  { value: 2, label: "2'li" },
+  { value: 3, label: "3'lü" },
+];
+
+export const COLLECTION_MOBILE_LAYOUT_OPTIONS: readonly {
+  value: CollectionWidgetConfig["mobileLayout"];
+  label: string;
+}[] = [
+  { value: "slider", label: "Kaydırmalı slider" },
+  { value: "grid", label: "Statik grid" },
+];
+
+export const COLLECTION_DESKTOP_WIDTH: Record<4 | 5 | 6, string> = {
+  4: "lg:w-[calc((100%-3rem)/4)]",
+  5: "lg:w-[calc((100%-4rem)/5)]",
+  6: "lg:w-[calc((100%-5rem)/6)]",
+};
+
+export const COLLECTION_MOBILE_SLIDER_WIDTH: Record<1 | 2 | 3, string> = {
+  1: "w-full",
+  2: "w-[calc((100%-1rem)/2)]",
+  3: "w-[calc((100%-2rem)/3)]",
+};
+
+export const COLLECTION_MOBILE_GRID_COLS: Record<1 | 2 | 3, string> = {
+  1: "grid-cols-1",
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+};
+
+export const COLLECTION_IMAGE_SIZES: Record<4 | 5 | 6, string> = {
+  4: "(max-width: 1024px) 50vw, 25vw",
+  5: "(max-width: 1024px) 50vw, 20vw",
+  6: "(max-width: 1024px) 50vw, 16vw",
+};
 
 export const BANNER_ASPECTS: Record<HomeBannerAspect, { className: string }> =
   {
@@ -291,6 +356,51 @@ export function normalizeSeoText(
   };
 }
 
+export function isCollectionPerViewDesktop(
+  value: unknown
+): value is 4 | 5 | 6 {
+  return value === 4 || value === 5 || value === 6;
+}
+
+export function isCollectionPerViewMobile(value: unknown): value is 1 | 2 | 3 {
+  return value === 1 || value === 2 || value === 3;
+}
+
+export function isCollectionMobileLayout(
+  value: unknown
+): value is CollectionWidgetConfig["mobileLayout"] {
+  return value === "slider" || value === "grid";
+}
+
+export function normalizeCollectionConfig(
+  input: unknown
+): CollectionWidgetConfig | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return undefined;
+  }
+
+  const record = input as {
+    collectionId?: unknown;
+    perViewDesktop?: unknown;
+    perViewMobile?: unknown;
+    mobileLayout?: unknown;
+  };
+  const collectionId = Number(record.collectionId);
+  if (!Number.isInteger(collectionId) || collectionId <= 0) return undefined;
+
+  const rawDesktop = Number(record.perViewDesktop);
+  const perViewDesktop = isCollectionPerViewDesktop(rawDesktop)
+    ? rawDesktop
+    : 4;
+  const rawMobile = Number(record.perViewMobile);
+  const perViewMobile = isCollectionPerViewMobile(rawMobile) ? rawMobile : 2;
+  const mobileLayout = isCollectionMobileLayout(record.mobileLayout)
+    ? record.mobileLayout
+    : "slider";
+
+  return { collectionId, perViewDesktop, perViewMobile, mobileLayout };
+}
+
 export function parseHomeWidgetConfig(
   raw: string | null | undefined
 ): HomeWidgetConfig {
@@ -308,6 +418,11 @@ export function parseHomeWidgetConfig(
 
     const seo = normalizeSeoText((parsed as { seo?: unknown }).seo);
     if (seo) config.seo = seo;
+
+    const collection = normalizeCollectionConfig(
+      (parsed as { collection?: unknown }).collection
+    );
+    if (collection) config.collection = collection;
 
     return config;
   } catch {

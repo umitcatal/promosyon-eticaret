@@ -13,7 +13,11 @@ import { normalizeSearchQuery, toLikePattern } from "./search-fold";
 import type {
   Category,
   CategoryNode,
+  CategoryOption,
   CategoryTreeItem,
+  Collection,
+  CollectionProductOption,
+  CollectionSummary,
   HomeWidgetBanner,
   HomeWidgetRow,
   HomeWidgetWithBanners,
@@ -81,6 +85,62 @@ function normalizePage(page: number | undefined): number {
   if (!page || !Number.isFinite(page) || page < 1) return 1;
   return Math.floor(page);
 }
+
+const COLLECTION_MEMBERS_CTE = `
+  WITH members AS (
+    SELECT cp.product_id AS product_id, 0 AS bucket, cp.sort_order AS manual_order
+    FROM collection_products cp
+    WHERE cp.collection_id = ?
+    UNION ALL
+    SELECT p.id AS product_id, 1 AS bucket, 0 AS manual_order
+    FROM products p
+    JOIN collection_categories cc
+      ON cc.category_id = p.category_id AND cc.collection_id = ?
+    WHERE p.active = 1 AND p.is_hidden = 0
+      AND NOT EXISTS (
+        SELECT 1 FROM collection_products cp2
+        WHERE cp2.collection_id = ? AND cp2.product_id = p.id
+      )
+  )`;
+
+const COLLECTION_MEMBERS_CTE_WITH_CHILDREN = `
+  WITH RECURSIVE collection_category_tree(category_id) AS (
+    SELECT cc.category_id
+    FROM collection_categories cc
+    WHERE cc.collection_id = ?
+    UNION
+    SELECT c.id
+    FROM categories c
+    JOIN collection_category_tree t ON c.parent_id = t.category_id
+  ),
+  members AS (
+    SELECT cp.product_id AS product_id, 0 AS bucket, cp.sort_order AS manual_order
+    FROM collection_products cp
+    WHERE cp.collection_id = ?
+    UNION ALL
+    SELECT p.id AS product_id, 1 AS bucket, 0 AS manual_order
+    FROM products p
+    JOIN collection_category_tree t ON t.category_id = p.category_id
+    WHERE p.active = 1 AND p.is_hidden = 0
+      AND NOT EXISTS (
+        SELECT 1 FROM collection_products cp2
+        WHERE cp2.collection_id = ? AND cp2.product_id = p.id
+      )
+  )`;
+
+function collectionMembersCte(includeChildren: boolean): string {
+  return includeChildren
+    ? COLLECTION_MEMBERS_CTE_WITH_CHILDREN
+    : COLLECTION_MEMBERS_CTE;
+}
+
+const COLLECTION_MEMBERS_WHERE = `
+  FROM products p
+  JOIN members m ON m.product_id = p.id
+  WHERE p.active = 1 AND p.is_hidden = 0`;
+
+const COLLECTION_MEMBERS_ORDER = `
+  ORDER BY m.bucket ASC, m.manual_order ASC, p.id DESC`;
 
 export function mapProductListRow(row: Record<string, unknown>): ProductListItem {
   const firstImages = row.first_images as string | null;
@@ -709,6 +769,171 @@ export async function getHomeWidgets(): Promise<HomeWidgetWithBanners[]> {
   cacheTag("homepage");
 
   return fetchHomeWidgets({ activeOnly: true });
+}
+
+export async function getCollectionBySlug(
+  slug: string
+): Promise<Collection | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("collections", "catalog");
+
+  const row = db
+    .prepare("SELECT * FROM collections WHERE slug = ? AND active = 1")
+    .get(slug) as Collection | undefined;
+  return row ?? null;
+}
+
+export async function getCollectionProductsBySlug(
+  slug: string,
+  options: { page?: number } = {}
+): Promise<{
+  collection: Collection;
+  items: ProductListItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+} | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("collections", "catalog");
+
+  const collection = db
+    .prepare("SELECT * FROM collections WHERE slug = ? AND active = 1")
+    .get(slug) as Collection | undefined;
+  if (!collection) return null;
+
+  const page = normalizePage(options.page);
+  const offset = (page - 1) * PAGE_SIZE;
+  const membersCte = collectionMembersCte(collection.include_children === 1);
+
+  const totalRow = db
+    .prepare(
+      `${membersCte}
+       SELECT COUNT(*) AS total ${COLLECTION_MEMBERS_WHERE}`
+    )
+    .get(collection.id, collection.id, collection.id) as { total: number };
+
+  const rows = db
+    .prepare(
+      `${membersCte}
+       SELECT ${PRODUCT_LIST_COLUMNS} ${COLLECTION_MEMBERS_WHERE}
+       ${COLLECTION_MEMBERS_ORDER}
+       LIMIT ? OFFSET ?`
+    )
+    .all(
+      collection.id,
+      collection.id,
+      collection.id,
+      PAGE_SIZE,
+      offset
+    ) as Record<string, unknown>[];
+
+  return {
+    collection,
+    items: rows.map(mapProductListRow),
+    total: totalRow.total,
+    page,
+    pageSize: PAGE_SIZE,
+  };
+}
+
+export async function getCollectionWidgetProducts(
+  collectionId: number,
+  limit: number
+): Promise<{ collection: Collection; items: ProductListItem[] } | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("collections", "catalog");
+
+  const collection = db
+    .prepare("SELECT * FROM collections WHERE id = ? AND active = 1")
+    .get(collectionId) as Collection | undefined;
+  if (!collection) return null;
+
+  const safeLimit = Math.max(1, Math.min(48, Math.trunc(limit) || 20));
+  const rows = db
+    .prepare(
+      `${collectionMembersCte(collection.include_children === 1)}
+       SELECT ${PRODUCT_LIST_COLUMNS} ${COLLECTION_MEMBERS_WHERE}
+       ${COLLECTION_MEMBERS_ORDER}
+       LIMIT ?`
+    )
+    .all(
+      collection.id,
+      collection.id,
+      collection.id,
+      safeLimit
+    ) as Record<string, unknown>[];
+
+  return { collection, items: rows.map(mapProductListRow) };
+}
+
+export function fetchCollections(): CollectionSummary[] {
+  return db
+    .prepare(
+      `SELECT c.*,
+        (SELECT COUNT(*) FROM collection_products cp
+          WHERE cp.collection_id = c.id) AS manual_count,
+        (SELECT COUNT(*) FROM collection_categories cc
+          WHERE cc.collection_id = c.id) AS category_count
+       FROM collections c
+       ORDER BY c.name COLLATE NOCASE`
+    )
+    .all() as CollectionSummary[];
+}
+
+export function fetchCollectionOptions(): Collection[] {
+  return db
+    .prepare(
+      "SELECT * FROM collections ORDER BY active DESC, name COLLATE NOCASE"
+    )
+    .all() as Collection[];
+}
+
+export function fetchCollectionEditorData(
+  collectionId: number
+): {
+  collection: Collection;
+  products: CollectionProductOption[];
+  categoryIds: number[];
+} | null {
+  const collection = db
+    .prepare("SELECT * FROM collections WHERE id = ?")
+    .get(collectionId) as Collection | undefined;
+  if (!collection) return null;
+
+  const products = db
+    .prepare(
+      `SELECT p.id, p.code, p.name, p.slug
+       FROM collection_products cp
+       JOIN products p ON p.id = cp.product_id
+       WHERE cp.collection_id = ?
+       ORDER BY cp.sort_order, p.id`
+    )
+    .all(collectionId) as CollectionProductOption[];
+
+  const categories = db
+    .prepare(
+      "SELECT category_id FROM collection_categories WHERE collection_id = ? ORDER BY category_id"
+    )
+    .all(collectionId) as { category_id: number }[];
+
+  return {
+    collection,
+    products,
+    categoryIds: categories.map((row) => row.category_id),
+  };
+}
+
+export function fetchAdminCategoryOptions(): CategoryOption[] {
+  return db
+    .prepare(
+      `SELECT id, name, parent_id, active, sort_order
+       FROM categories
+       ORDER BY sort_order, name COLLATE NOCASE`
+    )
+    .all() as CategoryOption[];
 }
 
 export async function getCategoryCardImage(

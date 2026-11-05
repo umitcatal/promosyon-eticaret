@@ -43,6 +43,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .prepare("SELECT slug, updated_at FROM pages WHERE active = 1")
     .all() as { slug: string; updated_at: string }[];
 
+  const collections = db
+    .prepare("SELECT slug, updated_at FROM collections WHERE active = 1")
+    .all() as { slug: string; updated_at: string }[];
+
   return [
     {
       url: `${SITE_BASE}/`,
@@ -72,6 +76,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.6,
         images: absoluteImages(firstImage(product.first_images)),
+      })),
+    ...collections
+      .filter((collection) => isSafeSlug(collection.slug))
+      .map((collection) => ({
+        url: `${SITE_BASE}/koleksiyon/${collection.slug}`,
+        lastModified: parseSqliteDate(collection.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
       })),
     ...pages
       .filter((page) => isSafeSlug(page.slug))

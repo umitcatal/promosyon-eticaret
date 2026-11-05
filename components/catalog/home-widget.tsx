@@ -4,7 +4,9 @@ import {
   CategoryIndex,
   type CategoryCard,
 } from "@/components/catalog/category-index";
+import { CarouselShell } from "@/components/catalog/carousel-shell";
 import {
+  ProductCard,
   ProductGrid,
   ProductLedger,
 } from "@/components/catalog/product-card";
@@ -16,9 +18,14 @@ import {
   BANNER_FULL_SIZES,
   BANNER_SIZES,
   bannerGridClass,
+  COLLECTION_DESKTOP_WIDTH,
+  COLLECTION_IMAGE_SIZES,
+  COLLECTION_MOBILE_GRID_COLS,
+  COLLECTION_MOBILE_SLIDER_WIDTH,
 } from "@/lib/home-widgets";
 import {
   getCategoryCardImage,
+  getCollectionWidgetProducts,
   getFeaturedProducts,
   getHomeCategoryTree,
   getNewProducts,
@@ -375,6 +382,58 @@ function BannerWidget({ widget }: { widget: HomeWidgetWithBanners }) {
   );
 }
 
+async function CollectionWidget({
+  widget,
+}: {
+  widget: HomeWidgetWithBanners;
+}) {
+  const config = widget.config.collection;
+  if (!config) return null;
+
+  const data = await getCollectionWidgetProducts(
+    config.collectionId,
+    Math.max(1, widget.item_limit || 20)
+  );
+  if (!data || data.items.length === 0) return null;
+
+  const { collection, items } = data;
+  const title = widget.title ?? collection.name;
+  const headingWidget = { ...widget, title };
+  const link = `/koleksiyon/${collection.slug}`;
+  const label = widget.link_label ?? "Tümünü gör";
+  const sizes = COLLECTION_IMAGE_SIZES[config.perViewDesktop];
+
+  const listClassName =
+    config.mobileLayout === "grid"
+      ? `grid gap-4 ${COLLECTION_MOBILE_GRID_COLS[config.perViewMobile]} lg:flex lg:gap-4 lg:overflow-x-auto lg:snap-x lg:snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`
+      : "flex gap-4 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
+  const itemClassName =
+    config.mobileLayout === "grid"
+      ? `lg:shrink-0 lg:snap-start ${COLLECTION_DESKTOP_WIDTH[config.perViewDesktop]}`
+      : `shrink-0 snap-start ${COLLECTION_MOBILE_SLIDER_WIDTH[config.perViewMobile]} ${COLLECTION_DESKTOP_WIDTH[config.perViewDesktop]}`;
+
+  return (
+    <Reveal className="mx-auto w-full max-w-7xl px-4">
+      <section className="mt-20 sm:mt-28">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <WidgetHeading widget={headingWidget} />
+          <WidgetLink label={label} link={link} />
+        </div>
+        <div className="mt-8">
+          <CarouselShell className={listClassName} label={title}>
+            {items.map((product) => (
+              <li className={itemClassName} key={product.id}>
+                <ProductCard product={product} sizes={sizes} />
+              </li>
+            ))}
+          </CarouselShell>
+        </div>
+      </section>
+    </Reveal>
+  );
+}
+
 function SeoTextWidget({ widget }: { widget: HomeWidgetWithBanners }) {
   const seo = widget.config.seo;
   if (!seo) return null;
@@ -410,6 +469,8 @@ export async function HomeWidgetSection({
       return <NewProductsWidget widget={widget} />;
     case "banner":
       return <BannerWidget widget={widget} />;
+    case "collection":
+      return <CollectionWidget widget={widget} />;
     case "seo_text":
       return <SeoTextWidget widget={widget} />;
     default:

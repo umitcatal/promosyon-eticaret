@@ -7,6 +7,7 @@ const NAV = [
   { href: "/admin", label: "Genel Bakış" },
   { href: "/admin/urunler", label: "Ürünler" },
   { href: "/admin/kategoriler", label: "Kategoriler" },
+  { href: "/admin/koleksiyonlar", label: "Koleksiyonlar" },
   { href: "/admin/menu", label: "Menü" },
   { href: "/admin/sayfalar", label: "Sayfalar" },
   { href: "/admin/slider", label: "Slider" },

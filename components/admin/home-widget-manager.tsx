@@ -23,10 +23,14 @@ import {
   BANNER_ASPECT_OPTIONS,
   BANNER_LAYOUT_OPTIONS,
   BANNER_WIDTH_OPTIONS,
+  COLLECTION_DESKTOP_OPTIONS,
+  COLLECTION_MOBILE_LAYOUT_OPTIONS,
+  COLLECTION_MOBILE_OPTIONS,
   HOME_WIDGET_META,
   HOME_WIDGET_TYPE_OPTIONS,
 } from "@/lib/home-widgets";
 import type {
+  Collection,
   HomeWidgetBanner,
   HomeWidgetType,
   HomeWidgetWithBanners,
@@ -138,7 +142,10 @@ function widgetTitle(widget: HomeWidgetWithBanners): string {
   return HOME_WIDGET_META[widget.type].label;
 }
 
-function widgetSummary(widget: HomeWidgetWithBanners): string {
+function widgetSummary(
+  widget: HomeWidgetWithBanners,
+  collectionName?: string
+): string {
   switch (widget.type) {
     case "banner":
       return `${widget.banners.length} görsel • ${widget.banner_layout}'li düzen • ${
@@ -153,6 +160,14 @@ function widgetSummary(widget: HomeWidgetWithBanners): string {
     case "featured_products":
     case "new_products":
       return `${widget.item_limit} ürün`;
+    case "collection": {
+      const config = widget.config.collection;
+      const name = collectionName ?? "Koleksiyon seçilmedi";
+      if (!config) return name;
+      return `${name} • ${widget.item_limit} ürün • ${config.perViewDesktop}'lü${
+        config.mobileLayout === "grid" ? " • mobil grid" : " • mobil slider"
+      }`;
+    }
     case "seo_text":
       return widget.config.seo
         ? "Zengin metin"
@@ -162,13 +177,15 @@ function widgetSummary(widget: HomeWidgetWithBanners): string {
   }
 }
 
-function AddWidgetForm() {
+function AddWidgetForm({ collections }: { collections: Collection[] }) {
   const [state, formAction, pending] = useActionState(
     createHomeWidgetAction,
     {}
   );
   const [type, setType] = useState<HomeWidgetType>("banner");
   const meta = HOME_WIDGET_META[type];
+  const isCollection = type === "collection";
+  const noCollections = isCollection && collections.length === 0;
 
   return (
     <form
@@ -258,6 +275,96 @@ function AddWidgetForm() {
             </div>
           </>
         ) : null}
+
+        {isCollection ? (
+          <>
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="widget-collection">
+                Koleksiyon
+              </label>
+              <select
+                className={inputClass}
+                defaultValue=""
+                id="widget-collection"
+                name="collectionId"
+                required
+              >
+                <option disabled value="">
+                  Koleksiyon seçin
+                </option>
+                {collections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.name}
+                    {collection.active === 1 ? "" : " (pasif)"}
+                  </option>
+                ))}
+              </select>
+              {noCollections ? (
+                <p className="mt-1 text-xs font-medium text-amber-700">
+                  Henüz koleksiyon yok.{" "}
+                  <Link
+                    className="underline"
+                    href="/admin/koleksiyonlar"
+                  >
+                    Koleksiyon oluşturun
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="widget-collection-desktop">
+                Masaüstü görünüm
+              </label>
+              <select
+                className={inputClass}
+                defaultValue={4}
+                id="widget-collection-desktop"
+                name="perViewDesktop"
+              >
+                {COLLECTION_DESKTOP_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelClass} htmlFor="widget-collection-mobile">
+                Mobil görünüm
+              </label>
+              <select
+                className={inputClass}
+                defaultValue={2}
+                id="widget-collection-mobile"
+                name="perViewMobile"
+              >
+                {COLLECTION_MOBILE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className={labelClass} htmlFor="widget-collection-layout">
+                Mobil düzen
+              </label>
+              <select
+                className={inputClass}
+                defaultValue="slider"
+                id="widget-collection-layout"
+                name="mobileLayout"
+              >
+                {COLLECTION_MOBILE_LAYOUT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </>
+        ) : null}
       </div>
 
       {state.error ? (
@@ -269,7 +376,7 @@ function AddWidgetForm() {
 
       <button
         className="rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={pending}
+        disabled={pending || noCollections}
         type="submit"
       >
         {pending ? "Ekleniyor..." : "Widget Ekle"}
@@ -278,7 +385,13 @@ function AddWidgetForm() {
   );
 }
 
-function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
+function WidgetEditForm({
+  collections,
+  widget,
+}: {
+  collections: Collection[];
+  widget: HomeWidgetWithBanners;
+}) {
   const [state, formAction, pending] = useActionState(
     updateHomeWidgetAction,
     {}
@@ -291,11 +404,14 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
   const isProcess = widget.type === "process";
   const isBanner = widget.type === "banner";
   const isSeoText = widget.type === "seo_text";
+  const isCollection = widget.type === "collection";
+  const collectionConfig = widget.config.collection;
   const hasHeadingFields = !isSlider && !isSeoText;
   const hasItemLimit =
     widget.type === "categories" ||
     widget.type === "featured_products" ||
-    widget.type === "new_products";
+    widget.type === "new_products" ||
+    widget.type === "collection";
 
   function updateStep(index: number, field: keyof StepDraft, value: string) {
     setSteps((current) =>
@@ -365,7 +481,7 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
         </div>
       ) : null}
 
-      {hasHeadingFields && !isProcess ? (
+      {hasHeadingFields && !isProcess && !isCollection ? (
         <>
           <div>
             <label className={labelClass} htmlFor={`link-${widget.id}`}>
@@ -390,6 +506,119 @@ function WidgetEditForm({ widget }: { widget: HomeWidgetWithBanners }) {
               name="link_label"
               placeholder="Tüm Ürünler"
             />
+          </div>
+        </>
+      ) : null}
+
+      {isCollection ? (
+        <>
+          <div>
+            <label className={labelClass} htmlFor={`collection-${widget.id}`}>
+              Koleksiyon
+            </label>
+            <select
+              className={inputClass}
+              defaultValue={collectionConfig?.collectionId ?? ""}
+              id={`collection-${widget.id}`}
+              name="collectionId"
+              required
+            >
+              <option disabled value="">
+                Koleksiyon seçin
+              </option>
+              {collectionConfig &&
+              !collections.some(
+                (collection) => collection.id === collectionConfig.collectionId
+              ) ? (
+                <option value={collectionConfig.collectionId}>
+                  Silinmiş koleksiyon (#{collectionConfig.collectionId})
+                </option>
+              ) : null}
+              {collections.map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.name}
+                  {collection.active === 1 ? "" : " (pasif)"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`link-label-${widget.id}`}
+            >
+              Buton metni
+            </label>
+            <input
+              className={inputClass}
+              defaultValue={widget.link_label ?? "Tümünü gör"}
+              id={`link-label-${widget.id}`}
+              name="link_label"
+              placeholder="Tümünü gör"
+            />
+            <p className="mt-1 text-xs text-zinc-400">
+              Buton koleksiyonun kendi sayfasına gider.
+            </p>
+          </div>
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`collection-desktop-${widget.id}`}
+            >
+              Masaüstü görünüm
+            </label>
+            <select
+              className={inputClass}
+              defaultValue={collectionConfig?.perViewDesktop ?? 4}
+              id={`collection-desktop-${widget.id}`}
+              name="perViewDesktop"
+            >
+              {COLLECTION_DESKTOP_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`collection-mobile-${widget.id}`}
+            >
+              Mobil görünüm
+            </label>
+            <select
+              className={inputClass}
+              defaultValue={collectionConfig?.perViewMobile ?? 2}
+              id={`collection-mobile-${widget.id}`}
+              name="perViewMobile"
+            >
+              {COLLECTION_MOBILE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`collection-layout-${widget.id}`}
+            >
+              Mobil düzen
+            </label>
+            <select
+              className={inputClass}
+              defaultValue={collectionConfig?.mobileLayout ?? "slider"}
+              id={`collection-layout-${widget.id}`}
+              name="mobileLayout"
+            >
+              {COLLECTION_MOBILE_LAYOUT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
         </>
       ) : null}
@@ -952,8 +1181,10 @@ function BannerManager({ widget }: { widget: HomeWidgetWithBanners }) {
 }
 
 export function HomeWidgetManager({
+  collections,
   widgets,
 }: {
+  collections: Collection[];
   widgets: HomeWidgetWithBanners[];
 }) {
   const [optimisticWidgets, applyOptimistic] = useOptimistic(
@@ -1006,7 +1237,7 @@ export function HomeWidgetManager({
 
   return (
     <div className="space-y-6">
-      <AddWidgetForm />
+      <AddWidgetForm collections={collections} />
 
       <div className="space-y-3">
         <p className="text-xs text-zinc-500">
@@ -1016,6 +1247,10 @@ export function HomeWidgetManager({
 
         {optimisticWidgets.map((widget, index) => {
           const meta = HOME_WIDGET_META[widget.type];
+          const collectionName = collections.find(
+            (collection) =>
+              collection.id === widget.config.collection?.collectionId
+          )?.name;
 
           return (
             <div
@@ -1084,7 +1319,7 @@ export function HomeWidgetManager({
                     {widgetTitle(widget)}
                   </p>
                   <p className="truncate text-xs text-zinc-500">
-                    {widgetSummary(widget)}
+                    {widgetSummary(widget, collectionName)}
                   </p>
                 </div>
 
@@ -1163,7 +1398,10 @@ export function HomeWidgetManager({
 
               {editingId === widget.id ? (
                 <>
-                  <WidgetEditForm widget={widget} />
+                  <WidgetEditForm
+                    collections={collections}
+                    widget={widget}
+                  />
                   {widget.type === "banner" ? (
                     <BannerManager widget={widget} />
                   ) : null}

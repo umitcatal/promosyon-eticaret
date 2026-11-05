@@ -45,7 +45,7 @@ export default async function OrdersPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+    <>
       <nav className="flex items-center gap-1.5 text-sm text-zinc-500">
         <Link className="transition hover:text-orange-600" href="/hesabim">
           Hesabım
@@ -168,6 +168,6 @@ export default async function OrdersPage({
           })}
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -13,10 +13,12 @@ import {
   isBannerWidth,
   isHomeWidgetType,
   isValidHref,
+  normalizeCollectionConfig,
   normalizeProcessSteps,
 } from "@/lib/home-widgets";
 import { sanitizeRichText } from "@/lib/sanitize";
 import type {
+  CollectionWidgetConfig,
   HomeWidgetBanner,
   HomeWidgetRow,
   HomeWidgetType,
@@ -33,10 +35,31 @@ function textOrNull(value: FormDataEntryValue | null): string | null {
 
 function defaultItemLimit(type: HomeWidgetType): number {
   const fallback = HOME_WIDGET_META[type].defaults.item_limit;
-  if (type === "featured_products" || type === "new_products") {
+  if (
+    type === "featured_products" ||
+    type === "new_products" ||
+    type === "collection"
+  ) {
     return clampItemLimit(fallback, 8, 1, 24);
   }
   return fallback;
+}
+
+function readCollectionConfig(
+  formData: FormData
+): CollectionWidgetConfig | undefined {
+  return normalizeCollectionConfig({
+    collectionId: Number(formData.get("collectionId") ?? 0),
+    perViewDesktop: Number(formData.get("perViewDesktop") ?? 4),
+    perViewMobile: Number(formData.get("perViewMobile") ?? 2),
+    mobileLayout: String(formData.get("mobileLayout") ?? "slider"),
+  });
+}
+
+function collectionExists(collectionId: number): boolean {
+  return Boolean(
+    db.prepare("SELECT id FROM collections WHERE id = ?").get(collectionId)
+  );
 }
 
 export async function createHomeWidgetAction(
@@ -61,6 +84,16 @@ export async function createHomeWidgetAction(
   const rawWidth = String(formData.get("bannerWidth") ?? "container");
   const bannerWidth =
     type === "banner" && isBannerWidth(rawWidth) ? rawWidth : "container";
+
+  let collectionConfig: CollectionWidgetConfig | undefined;
+  if (type === "collection") {
+    collectionConfig = readCollectionConfig(formData);
+    if (!collectionConfig) return { error: "Koleksiyon seçin." };
+    if (!collectionExists(collectionConfig.collectionId)) {
+      return { error: "Koleksiyon bulunamadı." };
+    }
+  }
+
   const config =
     type === "process"
       ? JSON.stringify({ steps: DEFAULT_PROCESS_STEPS })
@@ -68,7 +101,9 @@ export async function createHomeWidgetAction(
         ? JSON.stringify({
             seo: { content: "", collapsedByDefault: true },
           })
-        : "{}";
+        : type === "collection" && collectionConfig
+          ? JSON.stringify({ collection: collectionConfig })
+          : "{}";
 
   try {
     db.transaction(() => {
@@ -166,6 +201,15 @@ export async function updateHomeWidgetAction(
     bannerWidth = rawWidth;
   }
 
+  let collectionConfig: CollectionWidgetConfig | undefined;
+  if (type === "collection") {
+    collectionConfig = readCollectionConfig(formData);
+    if (!collectionConfig) return { error: "Koleksiyon seçin." };
+    if (!collectionExists(collectionConfig.collectionId)) {
+      return { error: "Koleksiyon bulunamadı." };
+    }
+  }
+
   let itemLimit = existing.item_limit;
   if (type === "categories") {
     itemLimit = clampItemLimit(
@@ -174,10 +218,14 @@ export async function updateHomeWidgetAction(
       0,
       24
     );
-  } else if (type === "featured_products" || type === "new_products") {
+  } else if (
+    type === "featured_products" ||
+    type === "new_products" ||
+    type === "collection"
+  ) {
     itemLimit = clampItemLimit(
       formData.get("itemLimit"),
-      existing.item_limit,
+      existing.item_limit > 0 ? existing.item_limit : 20,
       1,
       24
     );
@@ -204,6 +252,8 @@ export async function updateHomeWidgetAction(
         collapsedByDefault: formData.get("collapsedByDefault") === "on",
       },
     });
+  } else if (type === "collection" && collectionConfig) {
+    config = JSON.stringify({ collection: collectionConfig });
   }
 
   try {

@@ -1,5 +1,5 @@
 import { HomeWidgetManager } from "@/components/admin/home-widget-manager";
-import { fetchHomeWidgets } from "@/lib/queries";
+import { fetchCollectionOptions, fetchHomeWidgets } from "@/lib/queries";
 
 export const metadata = {
   title: "Anasayfa",
@@ -7,6 +7,7 @@ export const metadata = {
 
 export default function AdminHomePage() {
   const widgets = fetchHomeWidgets();
+  const collections = fetchCollectionOptions();
   const active = widgets.filter((widget) => widget.active === 1).length;
 
   return (
@@ -21,7 +22,7 @@ export default function AdminHomePage() {
         </p>
       </div>
 
-      <HomeWidgetManager widgets={widgets} />
+      <HomeWidgetManager collections={collections} widgets={widgets} />
     </div>
   );
 }

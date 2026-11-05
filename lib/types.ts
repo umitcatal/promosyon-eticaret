@@ -54,6 +54,37 @@ export type ProductListItem = ProductRow & {
 
 export type CategoryNode = Category & { children: CategoryNode[] };
 
+export type Collection = {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  active: number;
+  include_children: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CollectionSummary = Collection & {
+  manual_count: number;
+  category_count: number;
+};
+
+export type CollectionProductOption = {
+  id: number;
+  code: string;
+  name: string;
+  slug: string;
+};
+
+export type CategoryOption = {
+  id: number;
+  name: string;
+  parent_id: number | null;
+  active: number;
+  sort_order: number;
+};
+
 export type CategoryTreeItem = Category & {
   children: CategoryTreeItem[];
   product_count: number;
@@ -109,6 +140,7 @@ export type HomeWidgetType =
   | "process"
   | "new_products"
   | "banner"
+  | "collection"
   | "seo_text";
 
 export type HomeWidgetBannerLayout = 1 | 2 | 3;
@@ -127,9 +159,17 @@ export type HomeSeoTextConfig = {
   collapsedByDefault: boolean;
 };
 
+export type CollectionWidgetConfig = {
+  collectionId: number;
+  perViewDesktop: 4 | 5 | 6;
+  perViewMobile: 1 | 2 | 3;
+  mobileLayout: "slider" | "grid";
+};
+
 export type HomeWidgetConfig = {
   steps?: HomeProcessStep[];
   seo?: HomeSeoTextConfig;
+  collection?: CollectionWidgetConfig;
 };
 
 export type HomeWidgetBanner = {

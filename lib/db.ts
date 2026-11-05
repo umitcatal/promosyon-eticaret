@@ -190,10 +190,45 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_home_widget_banners_widget
   ON home_widget_banners(widget_id, sort_order, id);
+
+  CREATE TABLE IF NOT EXISTS collections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    include_children INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_collections_active ON collections(active);
+
+  CREATE TABLE IF NOT EXISTS collection_products (
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (collection_id, product_id)
+  ) WITHOUT ROWID;
+  CREATE INDEX IF NOT EXISTS idx_collection_products_order
+  ON collection_products(collection_id, sort_order, product_id);
+
+  CREATE TABLE IF NOT EXISTS collection_categories (
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (collection_id, category_id)
+  ) WITHOUT ROWID;
+  CREATE INDEX IF NOT EXISTS idx_collection_categories_category
+  ON collection_categories(category_id);
 `);
 
 function ensureColumn(
-  table: "categories" | "home_widgets" | "orders" | "products" | "variants",
+  table:
+    | "categories"
+    | "collections"
+    | "home_widgets"
+    | "orders"
+    | "products"
+    | "variants",
   column: string,
   definition: string
 ): boolean {
@@ -221,6 +256,11 @@ if (addedShowOnHome) {
     )
   `);
 }
+ensureColumn(
+  "collections",
+  "include_children",
+  "INTEGER NOT NULL DEFAULT 0"
+);
 ensureColumn("products", "baski_fiyatlari", "TEXT");
 ensureColumn("variants", "net_price", "REAL");
 ensureColumn("variants", "discount", "REAL");

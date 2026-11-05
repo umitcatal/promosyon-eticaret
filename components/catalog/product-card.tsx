@@ -4,7 +4,15 @@ import { ProductImage } from "@/components/catalog/product-image";
 import { PriceLabel } from "@/components/catalog/price-label";
 import type { ProductListItem } from "@/lib/types";
 
-export function ProductCard({ product }: { product: ProductListItem }) {
+const DEFAULT_IMAGE_SIZES = "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw";
+
+export function ProductCard({
+  product,
+  sizes = DEFAULT_IMAGE_SIZES,
+}: {
+  product: ProductListItem;
+  sizes?: string;
+}) {
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-sm border border-line bg-paper transition-colors duration-300 hover:border-ink/35">
       <Link
@@ -15,7 +23,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
           <ProductImage
             alt={product.name}
             className="object-contain p-5 mix-blend-multiply transition-transform duration-500 ease-out group-hover:scale-[1.05]"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            sizes={sizes}
             src={product.image}
           />
           {product.is_featured ? (
@@ -45,13 +53,17 @@ export function ProductCard({ product }: { product: ProductListItem }) {
   );
 }
 
-export function ProductGrid({ products }: { products: ProductListItem[] }) {
+export function ProductGrid({
+  emptyMessage = "Bu kategoride gösterilecek ürün bulunamadı.",
+  products,
+}: {
+  emptyMessage?: string;
+  products: ProductListItem[];
+}) {
   if (products.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-line-strong bg-paper px-6 py-16 text-center">
-        <p className="font-display text-lg text-ink-muted">
-          Bu kategoride gösterilecek ürün bulunamadı.
-        </p>
+        <p className="font-display text-lg text-ink-muted">{emptyMessage}</p>
       </div>
     );
   }

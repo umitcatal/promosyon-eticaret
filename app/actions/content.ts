@@ -17,6 +17,7 @@ const RESERVED_SLUGS = new Set([
   "hesabim",
   "kategori",
   "kayit",
+  "koleksiyon",
   "sepet",
   "urun",
   "urunler",
