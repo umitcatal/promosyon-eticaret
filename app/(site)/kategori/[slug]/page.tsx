@@ -16,17 +16,41 @@ import {
   getProductsByCategorySlug,
 } from "@/lib/queries";
 import type { Category } from "@/lib/types";
+import { absoluteImages, isSafeSlug, openGraphBase } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/kategori/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const data = await getCategoryBySlug(slug);
-  if (!data) return { title: "Kategori bulunamadı" };
+  // Partial Prerender static shell'i 200 ile gönderdiği için notFound() durum
+  // kodunu değiştiremiyor; soft-404'ün indekslenmesini meta ile engelliyoruz.
+  if (!data) {
+    return {
+      title: "Kategori bulunamadı",
+      robots: { index: false, follow: true },
+    };
+  }
+
+  const { category } = data;
+  const title = category.meta_title || `${category.name} Ürünleri`;
+  const description =
+    category.meta_description ||
+    `${category.name} kategorisindeki kurumsal promosyon ürünleri. Toplu alım ve logo baskı için teklif alın.`;
+  const canonical = isSafeSlug(slug) ? `/kategori/${slug}` : undefined;
+  const images = absoluteImages(category.image_url);
 
   return {
-    title: `${data.category.name} Ürünleri`,
-    description: `${data.category.name} kategorisindeki kurumsal promosyon ürünleri. Toplu alım ve logo baskı için teklif alın.`,
+    title,
+    description,
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: {
+      ...openGraphBase,
+      title,
+      description,
+      url: canonical,
+      images: images.length > 0 ? images : undefined,
+    },
   };
 }
 

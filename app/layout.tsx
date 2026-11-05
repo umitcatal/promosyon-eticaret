@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import { MotionBridge } from "@/components/motion/motion-bridge";
+import { SITE_BASE, openGraphBase } from "@/lib/seo";
 import "./globals.css";
 
 const geist = Geist({
@@ -23,15 +24,22 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: new URL(SITE_BASE),
   title: {
     default: "Promosyon Eticaret | Kurumsal Promosyon Ürünleri",
     template: "%s | Promosyon Eticaret",
   },
   description:
     "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası. Şirket logonuzla özelleştirilebilen yüzlerce ürün.",
+  robots: { index: true, follow: true },
+  openGraph: { ...openGraphBase },
+  twitter: { card: "summary_large_image" },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#faf8f3",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

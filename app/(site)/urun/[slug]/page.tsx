@@ -10,28 +10,40 @@ import {
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { getProductBySlug } from "@/lib/queries";
+import { absoluteImages, isSafeSlug, openGraphBase } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
 }: PageProps<"/urun/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const data = await getProductBySlug(slug);
-  if (!data) return { title: "Ürün bulunamadı" };
+  // Partial Prerender static shell'i 200 ile gönderdiği için notFound() durum
+  // kodunu değiştiremiyor; soft-404'ün indekslenmesini meta ile engelliyoruz.
+  if (!data) {
+    return { title: "Ürün bulunamadı", robots: { index: false, follow: true } };
+  }
 
+  const product = data.product;
+  const title = product.meta_title || product.name;
   const description =
-    descriptionToText(data.product.description).slice(0, 160) ||
-    `${data.product.name} - kurumsal promosyon ürünü.`;
-  const firstVariantImage = data.variants
-    .flatMap((variant) => parseImages(variant.images))
-    .at(0);
+    product.meta_description ||
+    descriptionToText(product.description).slice(0, 160) ||
+    `${product.name} - kurumsal promosyon ürünü.`;
+  const canonical = isSafeSlug(slug) ? `/urun/${slug}` : undefined;
+  const images = absoluteImages(
+    data.variants.flatMap((variant) => parseImages(variant.images)).at(0)
+  );
 
   return {
-    title: data.product.name,
+    title,
     description,
+    alternates: canonical ? { canonical } : undefined,
     openGraph: {
-      title: data.product.name,
+      ...openGraphBase,
+      title,
       description,
-      images: firstVariantImage ? [firstVariantImage] : undefined,
+      url: canonical,
+      images: images.length > 0 ? images : undefined,
     },
   };
 }

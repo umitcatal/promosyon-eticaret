@@ -18,6 +18,8 @@ export type CategoryAdminRow = {
   sort_order: number;
   active: number;
   show_on_home: number;
+  meta_title: string | null;
+  meta_description: string | null;
   parent_name: string | null;
   product_count: number;
 };
@@ -215,6 +217,44 @@ function CategoryFormFields({
           )}
         </div>
       ) : null}
+
+      <details className="lg:col-span-6 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          SEO metinleri
+        </summary>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`category-meta-title-${category.id}`}
+            >
+              SEO başlığı
+            </label>
+            <input
+              className={inputClass}
+              defaultValue={category.meta_title ?? ""}
+              id={`category-meta-title-${category.id}`}
+              name="metaTitle"
+              placeholder={`${category.name} Ürünleri`}
+            />
+          </div>
+          <div>
+            <label
+              className={labelClass}
+              htmlFor={`category-meta-description-${category.id}`}
+            >
+              SEO açıklaması
+            </label>
+            <textarea
+              className={`${inputClass} min-h-20`}
+              defaultValue={category.meta_description ?? ""}
+              id={`category-meta-description-${category.id}`}
+              name="metaDescription"
+              placeholder="Boş bırakılırsa otomatik açıklama kullanılır"
+            />
+          </div>
+        </div>
+      </details>
     </form>
   );
 }

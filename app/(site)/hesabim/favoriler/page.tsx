@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { requireUser } from "@/lib/auth";
@@ -5,8 +6,9 @@ import { getFavoriteProducts } from "@/lib/favorites";
 
 export const instant = false;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Favorilerim",
+  robots: { index: false, follow: true },
 };
 
 export default async function FavoritesPage() {

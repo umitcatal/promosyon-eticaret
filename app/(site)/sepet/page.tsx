@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   removeCartItemAction,
@@ -15,8 +16,9 @@ import { breakdownVat } from "@/lib/vat";
 
 export const instant = false;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Sepetim",
+  robots: { index: false, follow: true },
 };
 
 type CartRow = {

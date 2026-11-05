@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,8 +8,9 @@ import { statusColor, statusLabel, type OrderRow } from "@/lib/orders";
 
 export const instant = false;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Hesabım",
+  robots: { index: false, follow: true },
 };
 
 export default async function AccountPage() {

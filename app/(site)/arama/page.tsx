@@ -1,8 +1,19 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { CatalogHeading } from "@/components/catalog/catalog-chrome";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { searchProducts } from "@/lib/queries";
+
+export const metadata: Metadata = {
+  title: "Ürün Ara",
+  description:
+    "Ürün adı, ürün kodu veya etiketlerle kurumsal promosyon ürünlerini arayın.",
+  // Arama sonuçları incelenmeyecek kadar ince/kopya içerik; ürün linkleri
+  // takip edilmeye devam etsin.
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/arama" },
+};
 
 function SearchSkeleton() {
   return (

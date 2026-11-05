@@ -5,7 +5,7 @@ import {
   updateProductAction,
   type AdminActionState,
 } from "@/app/actions/admin";
-import { inputClass } from "@/components/ui/styles";
+import { inputClass, labelClass } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
 
 const initialState: AdminActionState = {};
@@ -31,6 +31,8 @@ export function ProductEditForm({
     code: string;
     is_featured: number;
     is_hidden: number;
+    meta_title: string | null;
+    meta_description: string | null;
   };
   variants: VariantInput[];
 }) {
@@ -62,6 +64,36 @@ export function ProductEditForm({
           />
           Sitede gizle
         </label>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <p className="text-sm font-semibold text-zinc-800">SEO metinleri</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className={labelClass} htmlFor="product-meta-title">
+              SEO başlığı
+            </label>
+            <input
+              className={inputClass}
+              defaultValue={product.meta_title ?? ""}
+              id="product-meta-title"
+              name="metaTitle"
+              placeholder="Boş bırakılırsa ürün adı kullanılır"
+            />
+          </div>
+          <div>
+            <label className={labelClass} htmlFor="product-meta-description">
+              SEO açıklaması
+            </label>
+            <textarea
+              className={`${inputClass} min-h-20`}
+              defaultValue={product.meta_description ?? ""}
+              id="product-meta-description"
+              name="metaDescription"
+              placeholder="Boş bırakılırsa ürün açıklamasından üretilir"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white">

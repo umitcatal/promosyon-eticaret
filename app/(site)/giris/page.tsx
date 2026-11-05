@@ -9,6 +9,7 @@ export const instant = false;
 export const metadata: Metadata = {
   title: "Giriş Yap",
   description: "Hesabınıza giriş yapın.",
+  robots: { index: false, follow: true },
 };
 
 const errorMessages: Record<string, string> = {

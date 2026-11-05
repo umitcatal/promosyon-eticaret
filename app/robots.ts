@@ -1,16 +1,17 @@
 import type { MetadataRoute } from "next";
+import { SITE_BASE } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/hesabim", "/sepet", "/api/"],
+        // /sepet ve /hesabim footer'dan linkli: disallow, noindex'in okunmasını
+        // engeller ve "yalnızca URL" olarak indekslenmelerine yol açar.
+        disallow: ["/admin", "/api/"],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
+    sitemap: `${SITE_BASE}/sitemap.xml`,
   };
 }

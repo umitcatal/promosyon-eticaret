@@ -7,6 +7,8 @@ export type Category = {
   sort_order: number;
   active: number;
   show_on_home: number;
+  meta_title: string | null;
+  meta_description: string | null;
 };
 
 export type ProductRow = {
@@ -22,6 +24,8 @@ export type ProductRow = {
   is_hidden: number;
   active: number;
   updated_at: string;
+  meta_title: string | null;
+  meta_description: string | null;
 };
 
 export type VariantRow = {

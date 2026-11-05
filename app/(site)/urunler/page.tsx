@@ -6,11 +6,20 @@ import { Pagination } from "@/components/catalog/pagination";
 import { ProductGrid } from "@/components/catalog/product-card";
 import { SortSelect } from "@/components/catalog/sort-select";
 import { getAllProducts, getCategorySidebarTree } from "@/lib/queries";
+import { openGraphBase } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Tüm Ürünler",
   description:
     "Kurumsal promosyon ürünlerinin tamamına göz atın. Toplu alım ve logo baskı için teklif alın.",
+  alternates: { canonical: "/urunler" },
+  openGraph: {
+    ...openGraphBase,
+    url: "/urunler",
+    title: "Tüm Ürünler",
+    description:
+      "Kurumsal promosyon ürünlerinin tamamına göz atın. Toplu alım ve logo baskı için teklif alın.",
+  },
 };
 
 function ProductsSkeleton() {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublishedPageBySlug } from "@/lib/queries";
 import { sanitizeRichText } from "@/lib/sanitize";
+import { cleanPath, isSafeSlug, openGraphBase } from "@/lib/seo";
 
 export const instant = false;
 
@@ -10,11 +11,29 @@ export async function generateMetadata({
 }: PageProps<"/[slug]">): Promise<Metadata> {
   const { slug } = await params;
   const page = await getPublishedPageBySlug(slug);
-  if (!page) return { title: "Sayfa bulunamadı" };
+  // Partial Prerender static shell'i 200 ile gönderdiği için notFound() durum
+  // kodunu değiştiremiyor; soft-404'ün indekslenmesini meta ile engelliyoruz.
+  if (!page) {
+    return {
+      title: "Sayfa bulunamadı",
+      robots: { index: false, follow: true },
+    };
+  }
+
+  const title = page.meta_title || page.title;
+  const description = page.meta_description ?? undefined;
+  const canonical = isSafeSlug(slug) ? cleanPath(slug) : undefined;
 
   return {
-    title: page.meta_title || page.title,
-    description: page.meta_description ?? undefined,
+    title,
+    description,
+    alternates: canonical ? { canonical } : undefined,
+    openGraph: {
+      ...openGraphBase,
+      title,
+      description,
+      url: canonical,
+    },
   };
 }
 

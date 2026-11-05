@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -11,8 +12,9 @@ import {
 
 export const instant = false;
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Siparişlerim",
+  robots: { index: false, follow: true },
 };
 
 export default async function OrdersPage({

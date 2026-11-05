@@ -34,6 +34,11 @@ function parsePrice(raw: FormDataEntryValue | null): number | null {
   return price;
 }
 
+function parseMeta(raw: FormDataEntryValue | null): string | null {
+  const value = String(raw ?? "").trim();
+  return value === "" ? null : value;
+}
+
 export async function syncCatalogAction(): Promise<AdminActionState> {
   await requireAdmin();
   try {
@@ -75,6 +80,8 @@ export async function updateProductAction(
 
   const isFeatured = formData.get("isFeatured") === "on" ? 1 : 0;
   const isHidden = formData.get("isHidden") === "on" ? 1 : 0;
+  const metaTitle = parseMeta(formData.get("metaTitle"));
+  const metaDescription = parseMeta(formData.get("metaDescription"));
 
   const variants = db
     .prepare("SELECT id FROM variants WHERE product_id = ?")
@@ -83,8 +90,11 @@ export async function updateProductAction(
   try {
     const run = db.transaction(() => {
       db.prepare(
-        "UPDATE products SET is_featured = ?, is_hidden = ?, updated_at = datetime('now') WHERE id = ?"
-      ).run(isFeatured, isHidden, productId);
+        `UPDATE products
+         SET is_featured = ?, is_hidden = ?, meta_title = ?, meta_description = ?,
+             updated_at = datetime('now')
+         WHERE id = ?`
+      ).run(isFeatured, isHidden, metaTitle, metaDescription, productId);
 
       const updateVariant = db.prepare(
         `UPDATE variants SET price = ?, price_source = ?, price_updated_at = datetime('now'), is_hidden = ?
@@ -130,6 +140,8 @@ export async function updateCategoryAction(
   const sortOrder = Number(formData.get("sortOrder") ?? 0) || 0;
   const active = formData.get("active") === "on" ? 1 : 0;
   const showOnHome = formData.get("showOnHome") === "on" ? 1 : 0;
+  const metaTitle = parseMeta(formData.get("metaTitle"));
+  const metaDescription = parseMeta(formData.get("metaDescription"));
   const removeImage = formData.get("removeImage") === "on";
   const file = formData.get("image");
 
@@ -143,8 +155,19 @@ export async function updateCategoryAction(
     const imageUrl = newImage ?? (removeImage ? null : existing.image_url);
 
     db.prepare(
-      "UPDATE categories SET image_url = ?, sort_order = ?, active = ?, show_on_home = ? WHERE id = ?"
-    ).run(imageUrl, sortOrder, active, showOnHome, categoryId);
+      `UPDATE categories
+       SET image_url = ?, sort_order = ?, active = ?, show_on_home = ?,
+           meta_title = ?, meta_description = ?
+       WHERE id = ?`
+    ).run(
+      imageUrl,
+      sortOrder,
+      active,
+      showOnHome,
+      metaTitle,
+      metaDescription,
+      categoryId
+    );
 
     if (existing.image_url && existing.image_url !== imageUrl) {
       await deleteCategoryImage(existing.image_url);

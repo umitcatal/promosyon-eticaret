@@ -15,6 +15,8 @@ type ProductRow = {
   is_hidden: number;
   active: number;
   category_id: number | null;
+  meta_title: string | null;
+  meta_description: string | null;
 };
 
 type VariantRow = {
@@ -91,6 +93,8 @@ export default async function AdminProductEditPage({
           code: product.code,
           is_featured: product.is_featured,
           is_hidden: product.is_hidden,
+          meta_title: product.meta_title,
+          meta_description: product.meta_description,
         }}
         variants={variants.map((variant) => ({
           id: variant.id,

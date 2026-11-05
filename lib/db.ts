@@ -231,6 +231,10 @@ ensureColumn(
   "banner_width",
   "TEXT NOT NULL DEFAULT 'container'"
 );
+ensureColumn("products", "meta_title", "TEXT");
+ensureColumn("products", "meta_description", "TEXT");
+ensureColumn("categories", "meta_title", "TEXT");
+ensureColumn("categories", "meta_description", "TEXT");
 
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_user_idempotency

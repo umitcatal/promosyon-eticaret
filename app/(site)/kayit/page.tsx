@@ -9,6 +9,7 @@ export const instant = false;
 export const metadata: Metadata = {
   title: "Üye Ol",
   description: "Yeni hesap oluşturun.",
+  robots: { index: false, follow: true },
 };
 
 export default async function SignupPage({
