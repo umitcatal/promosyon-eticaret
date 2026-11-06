@@ -532,6 +532,48 @@ export async function getProductBySlug(slug: string): Promise<{
   return { product, variants, category, parent };
 }
 
+export async function getSimilarProducts(
+  productId: number,
+  categoryId: number,
+  limit = 12
+): Promise<ProductListItem[]> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+
+  // Kök kategorilerde parent_id NULL olduğundan alt cümle NULL döner ve
+  // `c.parent_id = NULL` hiçbir satırı eşleştirmez; sadece kendi kategorisi kalır.
+  const categoryRows = db
+    .prepare(
+      `SELECT c.id FROM categories c
+       WHERE c.active = 1 AND (
+         c.id = ?
+         OR c.parent_id = (SELECT parent_id FROM categories WHERE id = ?)
+       )`
+    )
+    .all(categoryId, categoryId) as { id: number }[];
+
+  if (categoryRows.length === 0) return [];
+  const categoryIds = categoryRows.map((row) => row.id);
+  const placeholders = categoryIds.map(() => "?").join(", ");
+
+  const rows = db
+    .prepare(
+      `SELECT ${PRODUCT_LIST_COLUMNS}
+       FROM products p
+       WHERE p.active = 1 AND p.is_hidden = 0 AND p.id <> ?
+         AND p.category_id IN (${placeholders})
+       ORDER BY (p.category_id = ?) DESC, p.is_featured DESC, p.id DESC
+       LIMIT ?`
+    )
+    .all(productId, ...categoryIds, categoryId, limit) as Record<
+    string,
+    unknown
+  >[];
+
+  return rows.map(mapProductListRow);
+}
+
 export async function getFeaturedProducts(
   limit = 8
 ): Promise<ProductListItem[]> {

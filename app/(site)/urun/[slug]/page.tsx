@@ -7,6 +7,7 @@ import {
   ProductDetail,
   type ProductDetailVariant,
 } from "@/components/catalog/product-detail";
+import { SimilarProducts } from "@/components/catalog/similar-products";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { getProductBySlug } from "@/lib/queries";
@@ -168,6 +169,8 @@ async function ProductContent({
           </div>
         </Section>
       ) : null}
+
+      <SimilarProducts category={category} productId={product.id} />
     </div>
   );
 }
