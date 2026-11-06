@@ -532,6 +532,24 @@ export async function getProductBySlug(slug: string): Promise<{
   return { product, variants, category, parent };
 }
 
+export async function getProductListItemById(
+  id: number
+): Promise<ProductListItem | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("catalog");
+
+  const row = db
+    .prepare(
+      `SELECT ${PRODUCT_LIST_COLUMNS}
+       FROM products p
+       WHERE p.active = 1 AND p.is_hidden = 0 AND p.id = ?`
+    )
+    .get(id) as Record<string, unknown> | undefined;
+
+  return row ? mapProductListRow(row) : null;
+}
+
 export async function getSimilarProducts(
   productId: number,
   categoryId: number,

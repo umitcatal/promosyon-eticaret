@@ -141,6 +141,7 @@ export type HomeWidgetType =
   | "new_products"
   | "banner"
   | "collection"
+  | "recently_viewed"
   | "seo_text";
 
 export type HomeWidgetBannerLayout = 1 | 2 | 3;
@@ -161,8 +162,7 @@ export type HomeSeoTextConfig = {
 
 export type CollectionSlideStep = "page" | "item";
 
-export type CollectionWidgetConfig = {
-  collectionId: number;
+export type CarouselStyleConfig = {
   perViewDesktop: 4 | 5 | 6;
   perViewMobile: 1 | 2 | 3;
   mobileLayout: "slider" | "grid";
@@ -171,10 +171,15 @@ export type CollectionWidgetConfig = {
   slideStep: CollectionSlideStep;
 };
 
+export type CollectionWidgetConfig = CarouselStyleConfig & {
+  collectionId: number;
+};
+
 export type HomeWidgetConfig = {
   steps?: HomeProcessStep[];
   seo?: HomeSeoTextConfig;
   collection?: CollectionWidgetConfig;
+  recentlyViewed?: CarouselStyleConfig;
 };
 
 export type HomeWidgetBanner = {

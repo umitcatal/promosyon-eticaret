@@ -10,18 +10,22 @@ import {
   ProductGrid,
   ProductLedger,
 } from "@/components/catalog/product-card";
+import { RecentlyViewedSlider } from "@/components/catalog/recently-viewed-slider";
 import { HeroFallback, Slider } from "@/components/catalog/slider";
 import { SeoTextBlock } from "@/components/catalog/seo-text-block";
+import {
+  WidgetHeading,
+  WidgetLink,
+} from "@/components/catalog/widget-heading";
 import { Reveal } from "@/components/motion/reveal";
 import {
   BANNER_ASPECTS,
   BANNER_FULL_SIZES,
   BANNER_SIZES,
   bannerGridClass,
-  COLLECTION_DESKTOP_WIDTH,
+  carouselClassNames,
   COLLECTION_IMAGE_SIZES,
-  COLLECTION_MOBILE_GRID_COLS,
-  COLLECTION_MOBILE_SLIDER_WIDTH,
+  DEFAULT_CAROUSEL_STYLE,
 } from "@/lib/home-widgets";
 import {
   getCategoryCardImage,
@@ -36,62 +40,6 @@ import type {
   HomeWidgetBanner,
   HomeWidgetWithBanners,
 } from "@/lib/types";
-
-const TITLE_CLASS =
-  "mt-3 font-display text-3xl leading-none font-semibold tracking-tight sm:text-4xl lg:text-5xl";
-
-function WidgetHeading({
-  widget,
-  eyebrowClassName = "eyebrow",
-  titleClassName = TITLE_CLASS,
-  subtitleClassName = "mt-4 max-w-2xl text-sm leading-6 text-ink-muted",
-}: {
-  widget: HomeWidgetWithBanners;
-  eyebrowClassName?: string;
-  titleClassName?: string;
-  subtitleClassName?: string;
-}) {
-  if (!widget.eyebrow && !widget.title && !widget.subtitle) return null;
-
-  return (
-    <div>
-      {widget.eyebrow ? (
-        <p className={eyebrowClassName}>{widget.eyebrow}</p>
-      ) : null}
-      {widget.title ? <h2 className={titleClassName}>{widget.title}</h2> : null}
-      {widget.subtitle ? (
-        <p className={subtitleClassName}>{widget.subtitle}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function WidgetLink({
-  link,
-  label,
-  className = "",
-}: {
-  link: string | null;
-  label: string | null;
-  className?: string;
-}) {
-  if (!link || !label) return null;
-
-  return (
-    <Link
-      className={`group inline-flex items-center gap-2 border-b border-line-strong pb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700 ${className}`}
-      href={link}
-    >
-      {label}
-      <span
-        aria-hidden="true"
-        className="transition-transform group-hover:translate-x-1"
-      >
-        →
-      </span>
-    </Link>
-  );
-}
 
 function ProcessTitle({ title }: { title: string }) {
   return (
@@ -403,15 +351,8 @@ async function CollectionWidget({
   const label = widget.link_label ?? "Tümünü gör";
   const sizes = COLLECTION_IMAGE_SIZES[config.perViewDesktop];
 
-  const listClassName =
-    config.mobileLayout === "grid"
-      ? `grid gap-4 ${COLLECTION_MOBILE_GRID_COLS[config.perViewMobile]} lg:flex lg:gap-4 lg:overflow-x-auto lg:snap-x lg:snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`
-      : "flex gap-4 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-
-  const itemClassName =
-    config.mobileLayout === "grid"
-      ? `lg:shrink-0 lg:snap-start ${COLLECTION_DESKTOP_WIDTH[config.perViewDesktop]}`
-      : `shrink-0 snap-start ${COLLECTION_MOBILE_SLIDER_WIDTH[config.perViewMobile]} ${COLLECTION_DESKTOP_WIDTH[config.perViewDesktop]}`;
+  const { item: itemClassName, list: listClassName } =
+    carouselClassNames(config);
 
   return (
     <Reveal className="mx-auto w-full max-w-7xl px-4">
@@ -458,6 +399,20 @@ function SeoTextWidget({ widget }: { widget: HomeWidgetWithBanners }) {
   );
 }
 
+function RecentlyViewedWidget({ widget }: { widget: HomeWidgetWithBanners }) {
+  return (
+    <RecentlyViewedSlider
+      config={widget.config.recentlyViewed ?? DEFAULT_CAROUSEL_STYLE}
+      eyebrow={widget.eyebrow}
+      itemLimit={widget.item_limit}
+      link={widget.link}
+      linkLabel={widget.link_label}
+      subtitle={widget.subtitle}
+      title={widget.title}
+    />
+  );
+}
+
 export async function HomeWidgetSection({
   widget,
 }: {
@@ -478,6 +433,8 @@ export async function HomeWidgetSection({
       return <BannerWidget widget={widget} />;
     case "collection":
       return <CollectionWidget widget={widget} />;
+    case "recently_viewed":
+      return <RecentlyViewedWidget widget={widget} />;
     case "seo_text":
       return <SeoTextWidget widget={widget} />;
     default:

@@ -4,10 +4,11 @@ import { refresh } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getCart, saveCart } from "@/lib/cart";
+import { MAX_QUANTITY_PER_ITEM } from "@/lib/quantity";
 
 const addSchema = z.object({
   variantId: z.coerce.number().int().positive(),
-  quantity: z.coerce.number().int().min(1).max(999),
+  quantity: z.coerce.number().int().min(1).max(MAX_QUANTITY_PER_ITEM),
 });
 
 export async function addToCartAction(formData: FormData): Promise<void> {
@@ -26,7 +27,10 @@ export async function addToCartAction(formData: FormData): Promise<void> {
 
   const cart = await getCart();
   const key = String(parsed.data.variantId);
-  cart[key] = Math.min((cart[key] ?? 0) + parsed.data.quantity, 999);
+  cart[key] = Math.min(
+    (cart[key] ?? 0) + parsed.data.quantity,
+    MAX_QUANTITY_PER_ITEM
+  );
   await saveCart(cart);
   refresh();
 }

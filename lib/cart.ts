@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { MAX_QUANTITY_PER_ITEM } from "./quantity";
 
 export type CartItems = Record<string, number>;
 
@@ -20,7 +21,7 @@ export function parseCart(value: string | undefined): CartItems {
         id > 0 &&
         Number.isInteger(quantity) &&
         quantity > 0 &&
-        quantity <= 999
+        quantity <= MAX_QUANTITY_PER_ITEM
       ) {
         result[String(id)] = quantity;
       }

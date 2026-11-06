@@ -1,4 +1,5 @@
 import type {
+  CarouselStyleConfig,
   CollectionSlideStep,
   CollectionWidgetConfig,
   HomeBannerAspect,
@@ -28,6 +29,7 @@ export type HomeWidgetMeta = {
 export const HOME_WIDGET_TYPES: readonly HomeWidgetType[] = [
   "banner",
   "collection",
+  "recently_viewed",
   "slider",
   "categories",
   "featured_products",
@@ -93,6 +95,19 @@ export const HOME_WIDGET_META: Record<HomeWidgetType, HomeWidgetMeta> = {
       link: null,
       link_label: "Tümünü gör",
       item_limit: 20,
+    },
+  },
+  recently_viewed: {
+    label: "Son Gezilenler",
+    description:
+      "Ziyaretçinin tarayıcısında hatırlanan son ürünler; kayıt yoksa ana sayfada hiç görünmez.",
+    defaults: {
+      eyebrow: null,
+      title: "Son Gezilen Ürünler",
+      subtitle: null,
+      link: null,
+      link_label: null,
+      item_limit: 12,
     },
   },
   categories: {
@@ -238,6 +253,15 @@ export const COLLECTION_AUTOPLAY_MIN = 2;
 export const COLLECTION_AUTOPLAY_MAX = 30;
 export const COLLECTION_AUTOPLAY_DEFAULT = 5;
 
+export const DEFAULT_CAROUSEL_STYLE: CarouselStyleConfig = {
+  perViewDesktop: 4,
+  perViewMobile: 2,
+  mobileLayout: "slider",
+  autoplay: false,
+  autoplayInterval: COLLECTION_AUTOPLAY_DEFAULT,
+  slideStep: "page",
+};
+
 export const COLLECTION_DESKTOP_WIDTH: Record<4 | 5 | 6, string> = {
   4: "lg:w-[calc((100%-3rem)/4)]",
   5: "lg:w-[calc((100%-4rem)/5)]",
@@ -261,6 +285,23 @@ export const COLLECTION_IMAGE_SIZES: Record<4 | 5 | 6, string> = {
   5: "(max-width: 1024px) 50vw, 20vw",
   6: "(max-width: 1024px) 50vw, 16vw",
 };
+
+export function carouselClassNames(style: CarouselStyleConfig): {
+  item: string;
+  list: string;
+} {
+  const list =
+    style.mobileLayout === "grid"
+      ? `grid gap-4 ${COLLECTION_MOBILE_GRID_COLS[style.perViewMobile]} lg:flex lg:gap-4 lg:overflow-x-auto lg:snap-x lg:snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`
+      : "flex gap-4 snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
+
+  const item =
+    style.mobileLayout === "grid"
+      ? `lg:shrink-0 lg:snap-start ${COLLECTION_DESKTOP_WIDTH[style.perViewDesktop]}`
+      : `shrink-0 snap-start ${COLLECTION_MOBILE_SLIDER_WIDTH[style.perViewMobile]} ${COLLECTION_DESKTOP_WIDTH[style.perViewDesktop]}`;
+
+  return { item, list };
+}
 
 export const BANNER_ASPECTS: Record<HomeBannerAspect, { className: string }> =
   {
@@ -400,15 +441,14 @@ export function clampAutoplayInterval(value: unknown): number {
   );
 }
 
-export function normalizeCollectionConfig(
+export function normalizeCarouselStyle(
   input: unknown
-): CollectionWidgetConfig | undefined {
+): CarouselStyleConfig | undefined {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return undefined;
   }
 
   const record = input as {
-    collectionId?: unknown;
     perViewDesktop?: unknown;
     perViewMobile?: unknown;
     mobileLayout?: unknown;
@@ -416,26 +456,25 @@ export function normalizeCollectionConfig(
     autoplayInterval?: unknown;
     slideStep?: unknown;
   };
-  const collectionId = Number(record.collectionId);
-  if (!Number.isInteger(collectionId) || collectionId <= 0) return undefined;
 
   const rawDesktop = Number(record.perViewDesktop);
   const perViewDesktop = isCollectionPerViewDesktop(rawDesktop)
     ? rawDesktop
-    : 4;
+    : DEFAULT_CAROUSEL_STYLE.perViewDesktop;
   const rawMobile = Number(record.perViewMobile);
-  const perViewMobile = isCollectionPerViewMobile(rawMobile) ? rawMobile : 2;
+  const perViewMobile = isCollectionPerViewMobile(rawMobile)
+    ? rawMobile
+    : DEFAULT_CAROUSEL_STYLE.perViewMobile;
   const mobileLayout = isCollectionMobileLayout(record.mobileLayout)
     ? record.mobileLayout
-    : "slider";
+    : DEFAULT_CAROUSEL_STYLE.mobileLayout;
   const autoplay = record.autoplay === true;
   const autoplayInterval = clampAutoplayInterval(record.autoplayInterval);
   const slideStep = isCollectionSlideStep(record.slideStep)
     ? record.slideStep
-    : "page";
+    : DEFAULT_CAROUSEL_STYLE.slideStep;
 
   return {
-    collectionId,
     perViewDesktop,
     perViewMobile,
     mobileLayout,
@@ -443,6 +482,20 @@ export function normalizeCollectionConfig(
     autoplayInterval,
     slideStep,
   };
+}
+
+export function normalizeCollectionConfig(
+  input: unknown
+): CollectionWidgetConfig | undefined {
+  const style = normalizeCarouselStyle(input);
+  if (!style) return undefined;
+
+  const collectionId = Number(
+    (input as { collectionId?: unknown }).collectionId
+  );
+  if (!Number.isInteger(collectionId) || collectionId <= 0) return undefined;
+
+  return { collectionId, ...style };
 }
 
 export function parseHomeWidgetConfig(
@@ -467,6 +520,11 @@ export function parseHomeWidgetConfig(
       (parsed as { collection?: unknown }).collection
     );
     if (collection) config.collection = collection;
+
+    const recentlyViewed = normalizeCarouselStyle(
+      (parsed as { recentlyViewed?: unknown }).recentlyViewed
+    );
+    if (recentlyViewed) config.recentlyViewed = recentlyViewed;
 
     return config;
   } catch {

@@ -7,6 +7,7 @@ import {
   ProductDetail,
   type ProductDetailVariant,
 } from "@/components/catalog/product-detail";
+import { RecentlyViewedTracker } from "@/components/catalog/recently-viewed-tracker";
 import { SimilarProducts } from "@/components/catalog/similar-products";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
@@ -169,6 +170,8 @@ async function ProductContent({
           </div>
         </Section>
       ) : null}
+
+      <RecentlyViewedTracker productId={product.id} />
 
       <SimilarProducts category={category} productId={product.id} />
     </div>

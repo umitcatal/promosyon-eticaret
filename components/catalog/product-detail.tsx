@@ -6,6 +6,7 @@ import { addToCartAction } from "@/app/actions/cart";
 import { ProductImage } from "@/components/catalog/product-image";
 import { primaryButtonClass } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
+import { clampQuantity, MAX_QUANTITY_DIGITS } from "@/lib/quantity";
 
 export type ProductDetailVariant = {
   id: number;
@@ -60,7 +61,8 @@ export function ProductDetail({
       ?.id ?? variants[0]?.id ?? 0;
   const [selectedId, setSelectedId] = useState(firstAvailableId);
   const [activeImage, setActiveImage] = useState(0);
-  const [quantity, setQuantity] = useState(1);
+  const [quantityDraft, setQuantityDraft] = useState("1");
+  const quantity = clampQuantity(Number(quantityDraft));
   const [failedImages, setFailedImages] = useState<string[]>([]);
 
   const selected = useMemo(
@@ -101,6 +103,12 @@ export function ProductDetail({
       current.includes(image) ? current : [...current, image]
     );
     setActiveImage(0);
+  }
+
+  function stepQuantity(delta: number) {
+    setQuantityDraft((draft) =>
+      String(clampQuantity(clampQuantity(Number(draft)) + delta))
+    );
   }
 
   return (
@@ -203,18 +211,35 @@ export function ProductDetail({
             <button
               aria-label="Adet azalt"
               className="flex size-11 items-center justify-center text-lg text-ink-muted transition-colors hover:text-ink"
-              onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+              onClick={() => stepQuantity(-1)}
               type="button"
             >
               −
             </button>
-            <span className="w-12 text-center font-mono text-sm text-ink">
-              {quantity}
-            </span>
+            <input
+              aria-label="Adet"
+              autoComplete="off"
+              className="w-16 border-x border-line bg-transparent py-3 text-center font-mono text-sm text-ink outline-none focus:bg-surface/50"
+              inputMode="numeric"
+              onBlur={() =>
+                setQuantityDraft((draft) =>
+                  String(clampQuantity(Number(draft)))
+                )
+              }
+              onChange={(event) =>
+                setQuantityDraft(
+                  event.target.value
+                    .replace(/\D/g, "")
+                    .slice(0, MAX_QUANTITY_DIGITS)
+                )
+              }
+              type="text"
+              value={quantityDraft}
+            />
             <button
               aria-label="Adet artır"
               className="flex size-11 items-center justify-center text-lg text-ink-muted transition-colors hover:text-ink"
-              onClick={() => setQuantity((value) => Math.min(999, value + 1))}
+              onClick={() => stepQuantity(1)}
               type="button"
             >
               +

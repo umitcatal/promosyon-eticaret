@@ -13,11 +13,13 @@ import {
   isBannerWidth,
   isHomeWidgetType,
   isValidHref,
+  normalizeCarouselStyle,
   normalizeCollectionConfig,
   normalizeProcessSteps,
 } from "@/lib/home-widgets";
 import { sanitizeRichText } from "@/lib/sanitize";
 import type {
+  CarouselStyleConfig,
   CollectionWidgetConfig,
   HomeWidgetBanner,
   HomeWidgetRow,
@@ -38,11 +40,23 @@ function defaultItemLimit(type: HomeWidgetType): number {
   if (
     type === "featured_products" ||
     type === "new_products" ||
-    type === "collection"
+    type === "collection" ||
+    type === "recently_viewed"
   ) {
     return clampItemLimit(fallback, 8, 1, 24);
   }
   return fallback;
+}
+
+function carouselStyleFields(formData: FormData) {
+  return {
+    perViewDesktop: Number(formData.get("perViewDesktop") ?? 4),
+    perViewMobile: Number(formData.get("perViewMobile") ?? 2),
+    mobileLayout: String(formData.get("mobileLayout") ?? "slider"),
+    autoplay: formData.get("autoplay") === "on",
+    autoplayInterval: Number(formData.get("autoplayInterval") ?? 5),
+    slideStep: String(formData.get("slideStep") ?? "page"),
+  };
 }
 
 function readCollectionConfig(
@@ -50,13 +64,14 @@ function readCollectionConfig(
 ): CollectionWidgetConfig | undefined {
   return normalizeCollectionConfig({
     collectionId: Number(formData.get("collectionId") ?? 0),
-    perViewDesktop: Number(formData.get("perViewDesktop") ?? 4),
-    perViewMobile: Number(formData.get("perViewMobile") ?? 2),
-    mobileLayout: String(formData.get("mobileLayout") ?? "slider"),
-    autoplay: formData.get("autoplay") === "on",
-    autoplayInterval: Number(formData.get("autoplayInterval") ?? 5),
-    slideStep: String(formData.get("slideStep") ?? "page"),
+    ...carouselStyleFields(formData),
   });
+}
+
+function readCarouselStyle(
+  formData: FormData
+): CarouselStyleConfig | undefined {
+  return normalizeCarouselStyle(carouselStyleFields(formData));
 }
 
 function collectionExists(collectionId: number): boolean {
@@ -97,6 +112,12 @@ export async function createHomeWidgetAction(
     }
   }
 
+  let carouselStyle: CarouselStyleConfig | undefined;
+  if (type === "recently_viewed") {
+    carouselStyle = readCarouselStyle(formData);
+    if (!carouselStyle) return { error: "Slider ayarları geçersiz." };
+  }
+
   const config =
     type === "process"
       ? JSON.stringify({ steps: DEFAULT_PROCESS_STEPS })
@@ -106,7 +127,9 @@ export async function createHomeWidgetAction(
           })
         : type === "collection" && collectionConfig
           ? JSON.stringify({ collection: collectionConfig })
-          : "{}";
+          : type === "recently_viewed" && carouselStyle
+            ? JSON.stringify({ recentlyViewed: carouselStyle })
+            : "{}";
 
   try {
     db.transaction(() => {
@@ -213,6 +236,12 @@ export async function updateHomeWidgetAction(
     }
   }
 
+  let carouselStyle: CarouselStyleConfig | undefined;
+  if (type === "recently_viewed") {
+    carouselStyle = readCarouselStyle(formData);
+    if (!carouselStyle) return { error: "Slider ayarları geçersiz." };
+  }
+
   let itemLimit = existing.item_limit;
   if (type === "categories") {
     itemLimit = clampItemLimit(
@@ -224,11 +253,14 @@ export async function updateHomeWidgetAction(
   } else if (
     type === "featured_products" ||
     type === "new_products" ||
-    type === "collection"
+    type === "collection" ||
+    type === "recently_viewed"
   ) {
     itemLimit = clampItemLimit(
       formData.get("itemLimit"),
-      existing.item_limit > 0 ? existing.item_limit : 20,
+      existing.item_limit > 0
+        ? existing.item_limit
+        : HOME_WIDGET_META[type].defaults.item_limit,
       1,
       24
     );
@@ -257,6 +289,8 @@ export async function updateHomeWidgetAction(
     });
   } else if (type === "collection" && collectionConfig) {
     config = JSON.stringify({ collection: collectionConfig });
+  } else if (type === "recently_viewed" && carouselStyle) {
+    config = JSON.stringify({ recentlyViewed: carouselStyle });
   }
 
   try {

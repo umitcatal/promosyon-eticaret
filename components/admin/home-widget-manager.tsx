@@ -18,22 +18,17 @@ import {
   updateHomeWidgetAction,
 } from "@/app/actions/home";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
+import { CarouselStyleFields } from "@/components/admin/home-widget-fields";
 import { inputClass, labelClass } from "@/components/ui/styles";
 import {
   BANNER_ASPECT_OPTIONS,
   BANNER_LAYOUT_OPTIONS,
   BANNER_WIDTH_OPTIONS,
-  COLLECTION_AUTOPLAY_DEFAULT,
-  COLLECTION_AUTOPLAY_MAX,
-  COLLECTION_AUTOPLAY_MIN,
-  COLLECTION_DESKTOP_OPTIONS,
-  COLLECTION_MOBILE_LAYOUT_OPTIONS,
-  COLLECTION_MOBILE_OPTIONS,
-  COLLECTION_SLIDE_STEP_OPTIONS,
   HOME_WIDGET_META,
   HOME_WIDGET_TYPE_OPTIONS,
 } from "@/lib/home-widgets";
 import type {
+  CarouselStyleConfig,
   Collection,
   HomeWidgetBanner,
   HomeWidgetType,
@@ -146,6 +141,19 @@ function widgetTitle(widget: HomeWidgetWithBanners): string {
   return HOME_WIDGET_META[widget.type].label;
 }
 
+function carouselSummary(
+  itemLimit: number,
+  config: CarouselStyleConfig
+): string {
+  const step = config.slideStep === "item" ? "tek tek" : "sayfa halinde";
+  const autoplay = config.autoplay
+    ? ` • oto ${config.autoplayInterval}sn`
+    : "";
+  return `${itemLimit} ürün • ${config.perViewDesktop}'lü${
+    config.mobileLayout === "grid" ? " • mobil grid" : " • mobil slider"
+  } • ${step}${autoplay}`;
+}
+
 function widgetSummary(
   widget: HomeWidgetWithBanners,
   collectionName?: string
@@ -168,13 +176,12 @@ function widgetSummary(
       const config = widget.config.collection;
       const name = collectionName ?? "Koleksiyon seçilmedi";
       if (!config) return name;
-      const step = config.slideStep === "item" ? "tek tek" : "sayfa halinde";
-      const autoplay = config.autoplay
-        ? ` • oto ${config.autoplayInterval}sn`
-        : "";
-      return `${name} • ${widget.item_limit} ürün • ${config.perViewDesktop}'lü${
-        config.mobileLayout === "grid" ? " • mobil grid" : " • mobil slider"
-      } • ${step}${autoplay}`;
+      return `${name} • ${carouselSummary(widget.item_limit, config)}`;
+    }
+    case "recently_viewed": {
+      const config = widget.config.recentlyViewed;
+      if (!config) return "Varsayılan slider ayarları";
+      return `${carouselSummary(widget.item_limit, config)} • tarayıcıda saklanır`;
     }
     case "seo_text":
       return widget.config.seo
@@ -193,6 +200,7 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
   const [type, setType] = useState<HomeWidgetType>("banner");
   const meta = HOME_WIDGET_META[type];
   const isCollection = type === "collection";
+  const isRecentlyViewed = type === "recently_viewed";
   const noCollections = isCollection && collections.length === 0;
 
   return (
@@ -284,146 +292,42 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
           </>
         ) : null}
 
-        {isCollection ? (
+        {isCollection || isRecentlyViewed ? (
           <>
-            <div className="sm:col-span-2">
-              <label className={labelClass} htmlFor="widget-collection">
-                Koleksiyon
-              </label>
-              <select
-                className={inputClass}
-                defaultValue=""
-                id="widget-collection"
-                name="collectionId"
-                required
-              >
-                <option disabled value="">
-                  Koleksiyon seçin
-                </option>
-                {collections.map((collection) => (
-                  <option key={collection.id} value={collection.id}>
-                    {collection.name}
-                    {collection.active === 1 ? "" : " (pasif)"}
+            {isCollection ? (
+              <div className="sm:col-span-2">
+                <label className={labelClass} htmlFor="widget-collection">
+                  Koleksiyon
+                </label>
+                <select
+                  className={inputClass}
+                  defaultValue=""
+                  id="widget-collection"
+                  name="collectionId"
+                  required
+                >
+                  <option disabled value="">
+                    Koleksiyon seçin
                   </option>
-                ))}
-              </select>
-              {noCollections ? (
-                <p className="mt-1 text-xs font-medium text-amber-700">
-                  Henüz koleksiyon yok.{" "}
-                  <Link
-                    className="underline"
-                    href="/admin/koleksiyonlar"
-                  >
-                    Koleksiyon oluşturun
-                  </Link>
-                  .
-                </p>
-              ) : null}
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="widget-collection-desktop">
-                Masaüstü görünüm
-              </label>
-              <select
-                className={inputClass}
-                defaultValue={4}
-                id="widget-collection-desktop"
-                name="perViewDesktop"
-              >
-                {COLLECTION_DESKTOP_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelClass} htmlFor="widget-collection-mobile">
-                Mobil görünüm
-              </label>
-              <select
-                className={inputClass}
-                defaultValue={2}
-                id="widget-collection-mobile"
-                name="perViewMobile"
-              >
-                {COLLECTION_MOBILE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className={labelClass} htmlFor="widget-collection-layout">
-                Mobil düzen
-              </label>
-              <select
-                className={inputClass}
-                defaultValue="slider"
-                id="widget-collection-layout"
-                name="mobileLayout"
-              >
-                {COLLECTION_MOBILE_LAYOUT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-                <input
-                  className="h-4 w-4 accent-orange-600"
-                  name="autoplay"
-                  type="checkbox"
-                />
-                Otomatik oynatma
-              </label>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label
-                    className={labelClass}
-                    htmlFor="widget-collection-autoplay-interval"
-                  >
-                    Oynatma aralığı (saniye)
-                  </label>
-                  <input
-                    className={inputClass}
-                    defaultValue={COLLECTION_AUTOPLAY_DEFAULT}
-                    id="widget-collection-autoplay-interval"
-                    max={COLLECTION_AUTOPLAY_MAX}
-                    min={COLLECTION_AUTOPLAY_MIN}
-                    name="autoplayInterval"
-                    type="number"
-                  />
-                </div>
-                <div>
-                  <label
-                    className={labelClass}
-                    htmlFor="widget-collection-step"
-                  >
-                    Kaydırma adımı
-                  </label>
-                  <select
-                    className={inputClass}
-                    defaultValue="page"
-                    id="widget-collection-step"
-                    name="slideStep"
-                  >
-                    {COLLECTION_SLIDE_STEP_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                      {collection.active === 1 ? "" : " (pasif)"}
+                    </option>
+                  ))}
+                </select>
+                {noCollections ? (
+                  <p className="mt-1 text-xs font-medium text-amber-700">
+                    Henüz koleksiyon yok.{" "}
+                    <Link className="underline" href="/admin/koleksiyonlar">
+                      Koleksiyon oluşturun
+                    </Link>
+                    .
+                  </p>
+                ) : null}
               </div>
-              <p className="mt-2 text-xs text-zinc-400">
-                Otomatik oynatma yalnızca slider görünümünde çalışır; fare
-                üzerine gelince ve dokunulduğunda duraklar.
-              </p>
-            </div>
+            ) : null}
+            <CarouselStyleFields idPrefix="widget-carousel" />
           </>
         ) : null}
       </div>
@@ -466,13 +370,18 @@ function WidgetEditForm({
   const isBanner = widget.type === "banner";
   const isSeoText = widget.type === "seo_text";
   const isCollection = widget.type === "collection";
+  const isRecentlyViewed = widget.type === "recently_viewed";
   const collectionConfig = widget.config.collection;
+  const carouselConfig = isCollection
+    ? collectionConfig
+    : widget.config.recentlyViewed;
   const hasHeadingFields = !isSlider && !isSeoText;
   const hasItemLimit =
     widget.type === "categories" ||
     widget.type === "featured_products" ||
     widget.type === "new_products" ||
-    widget.type === "collection";
+    widget.type === "collection" ||
+    widget.type === "recently_viewed";
 
   function updateStep(index: number, field: keyof StepDraft, value: string) {
     setSteps((current) =>
@@ -571,173 +480,74 @@ function WidgetEditForm({
         </>
       ) : null}
 
-      {isCollection ? (
+      {isCollection || isRecentlyViewed ? (
         <>
-          <div>
-            <label className={labelClass} htmlFor={`collection-${widget.id}`}>
-              Koleksiyon
-            </label>
-            <select
-              className={inputClass}
-              defaultValue={collectionConfig?.collectionId ?? ""}
-              id={`collection-${widget.id}`}
-              name="collectionId"
-              required
-            >
-              <option disabled value="">
-                Koleksiyon seçin
-              </option>
-              {collectionConfig &&
-              !collections.some(
-                (collection) => collection.id === collectionConfig.collectionId
-              ) ? (
-                <option value={collectionConfig.collectionId}>
-                  Silinmiş koleksiyon (#{collectionConfig.collectionId})
-                </option>
-              ) : null}
-              {collections.map((collection) => (
-                <option key={collection.id} value={collection.id}>
-                  {collection.name}
-                  {collection.active === 1 ? "" : " (pasif)"}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              className={labelClass}
-              htmlFor={`link-label-${widget.id}`}
-            >
-              Buton metni
-            </label>
-            <input
-              className={inputClass}
-              defaultValue={widget.link_label ?? "Tümünü gör"}
-              id={`link-label-${widget.id}`}
-              name="link_label"
-              placeholder="Tümünü gör"
-            />
-            <p className="mt-1 text-xs text-zinc-400">
-              Buton koleksiyonun kendi sayfasına gider.
-            </p>
-          </div>
-          <div>
-            <label
-              className={labelClass}
-              htmlFor={`collection-desktop-${widget.id}`}
-            >
-              Masaüstü görünüm
-            </label>
-            <select
-              className={inputClass}
-              defaultValue={collectionConfig?.perViewDesktop ?? 4}
-              id={`collection-desktop-${widget.id}`}
-              name="perViewDesktop"
-            >
-              {COLLECTION_DESKTOP_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              className={labelClass}
-              htmlFor={`collection-mobile-${widget.id}`}
-            >
-              Mobil görünüm
-            </label>
-            <select
-              className={inputClass}
-              defaultValue={collectionConfig?.perViewMobile ?? 2}
-              id={`collection-mobile-${widget.id}`}
-              name="perViewMobile"
-            >
-              {COLLECTION_MOBILE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              className={labelClass}
-              htmlFor={`collection-layout-${widget.id}`}
-            >
-              Mobil düzen
-            </label>
-            <select
-              className={inputClass}
-              defaultValue={collectionConfig?.mobileLayout ?? "slider"}
-              id={`collection-layout-${widget.id}`}
-              name="mobileLayout"
-            >
-              {COLLECTION_MOBILE_LAYOUT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="rounded-lg border border-zinc-200 p-3 sm:col-span-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-zinc-700">
-              <input
-                className="h-4 w-4 accent-orange-600"
-                defaultChecked={collectionConfig?.autoplay === true}
-                name="autoplay"
-                type="checkbox"
-              />
-              Otomatik oynatma
-            </label>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {isCollection ? (
+            <>
               <div>
                 <label
                   className={labelClass}
-                  htmlFor={`collection-autoplay-interval-${widget.id}`}
+                  htmlFor={`collection-${widget.id}`}
                 >
-                  Oynatma aralığı (saniye)
-                </label>
-                <input
-                  className={inputClass}
-                  defaultValue={
-                    collectionConfig?.autoplayInterval ??
-                    COLLECTION_AUTOPLAY_DEFAULT
-                  }
-                  id={`collection-autoplay-interval-${widget.id}`}
-                  max={COLLECTION_AUTOPLAY_MAX}
-                  min={COLLECTION_AUTOPLAY_MIN}
-                  name="autoplayInterval"
-                  type="number"
-                />
-              </div>
-              <div>
-                <label
-                  className={labelClass}
-                  htmlFor={`collection-step-${widget.id}`}
-                >
-                  Kaydırma adımı
+                  Koleksiyon
                 </label>
                 <select
                   className={inputClass}
-                  defaultValue={collectionConfig?.slideStep ?? "page"}
-                  id={`collection-step-${widget.id}`}
-                  name="slideStep"
+                  defaultValue={collectionConfig?.collectionId ?? ""}
+                  id={`collection-${widget.id}`}
+                  name="collectionId"
+                  required
                 >
-                  {COLLECTION_SLIDE_STEP_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  <option disabled value="">
+                    Koleksiyon seçin
+                  </option>
+                  {collectionConfig &&
+                  !collections.some(
+                    (collection) =>
+                      collection.id === collectionConfig.collectionId
+                  ) ? (
+                    <option value={collectionConfig.collectionId}>
+                      Silinmiş koleksiyon (#{collectionConfig.collectionId})
+                    </option>
+                  ) : null}
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                      {collection.active === 1 ? "" : " (pasif)"}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
-            <p className="mt-2 text-xs text-zinc-400">
-              Otomatik oynatma yalnızca slider görünümünde çalışır; fare
-              üzerine gelince ve dokunulduğunda duraklar.
+              <div>
+                <label
+                  className={labelClass}
+                  htmlFor={`link-label-${widget.id}`}
+                >
+                  Buton metni
+                </label>
+                <input
+                  className={inputClass}
+                  defaultValue={widget.link_label ?? "Tümünü gör"}
+                  id={`link-label-${widget.id}`}
+                  name="link_label"
+                  placeholder="Tümünü gör"
+                />
+                <p className="mt-1 text-xs text-zinc-400">
+                  Buton koleksiyonun kendi sayfasına gider.
+                </p>
+              </div>
+            </>
+          ) : null}
+          <CarouselStyleFields
+            config={carouselConfig}
+            idPrefix={`carousel-${widget.id}`}
+          />
+          {isRecentlyViewed ? (
+            <p className="text-xs text-zinc-400 sm:col-span-2">
+              Ürünler ziyaretçinin tarayıcısında hatırlanır; bu tarayıcıda hiç
+              ürün gezilmediyse bölüm ana sayfada görünmez.
             </p>
-          </div>
+          ) : null}
         </>
       ) : null}
 

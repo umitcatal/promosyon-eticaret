@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { DEFAULT_PROCESS_STEPS } from "./home-widgets";
+import {
+  DEFAULT_CAROUSEL_STYLE,
+  DEFAULT_PROCESS_STEPS,
+  HOME_WIDGET_META,
+} from "./home-widgets";
 import { foldTr } from "./search-fold";
 
 const dbPath =
@@ -297,6 +301,29 @@ export function setSetting(key: string, value: string): void {
 }
 
 const HOME_WIDGETS_SEED_KEY = "home_widgets_seeded";
+const RECENTLY_VIEWED_WIDGET_SEED_KEY = "recently_viewed_widget_seeded";
+
+function insertRecentlyViewedWidget(sortOrder: number): void {
+  const defaults = HOME_WIDGET_META.recently_viewed.defaults;
+
+  db.prepare(
+    `INSERT INTO home_widgets
+       (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    "recently_viewed",
+    defaults.eyebrow,
+    defaults.title,
+    defaults.subtitle,
+    defaults.link,
+    defaults.link_label,
+    1,
+    "wide",
+    defaults.item_limit,
+    JSON.stringify({ recentlyViewed: DEFAULT_CAROUSEL_STYLE }),
+    sortOrder
+  );
+}
 
 function seedHomeWidgets(): void {
   if (getSetting(HOME_WIDGETS_SEED_KEY) === "1") return;
@@ -370,8 +397,32 @@ function seedHomeWidgets(): void {
       "{}",
       4
     );
+    insertRecentlyViewedWidget(5);
     setSetting(HOME_WIDGETS_SEED_KEY, "1");
   })();
 }
 
+// Eski kurulumlarda seed bayrağı zaten 1 olduğundan yeni bölüm burada eklenir.
+function ensureRecentlyViewedWidget(): void {
+  if (getSetting(RECENTLY_VIEWED_WIDGET_SEED_KEY) === "1") return;
+
+  const { total } = db
+    .prepare(
+      "SELECT COUNT(*) AS total FROM home_widgets WHERE type = 'recently_viewed'"
+    )
+    .get() as { total: number };
+
+  if (total === 0) {
+    const { next } = db
+      .prepare(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets"
+      )
+      .get() as { next: number };
+    insertRecentlyViewedWidget(next);
+  }
+
+  setSetting(RECENTLY_VIEWED_WIDGET_SEED_KEY, "1");
+}
+
 seedHomeWidgets();
+ensureRecentlyViewedWidget();
