@@ -3,10 +3,11 @@
 import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AdminActionState } from "@/app/actions/admin";
-import { requireAdmin } from "@/lib/auth";
+import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sanitizeRichText } from "@/lib/sanitize";
 import { slugify } from "@/lib/slug";
+import { saveContentImage } from "@/lib/uploads";
 import type { MenuItemType } from "@/lib/types";
 
 const RESERVED_SLUGS = new Set([
@@ -95,6 +96,26 @@ export async function savePageAction(
   updateTag("pages");
   updateTag("menu");
   redirect(returnTo);
+}
+
+export async function uploadEditorImageAction(
+  formData: FormData
+): Promise<{ url: string } | { error: string }> {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "admin") {
+    return { error: "Bu işlem için yetkiniz yok." };
+  }
+
+  const file = formData.get("image");
+  if (!(file instanceof File)) {
+    return { error: "Lütfen bir görsel seçin." };
+  }
+
+  try {
+    return { url: await saveContentImage(file) };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
 }
 
 export async function deletePageAction(formData: FormData): Promise<void> {
