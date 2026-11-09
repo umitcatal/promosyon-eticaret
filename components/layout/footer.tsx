@@ -103,7 +103,7 @@ export async function Footer() {
         </div>
 
         <div className="flex flex-col items-start justify-between gap-3 py-6 font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40 sm:flex-row sm:items-center">
-          <p>© {year} Promosyon Eticaret</p>
+          <p>© {year} Kurumsal Promo</p>
           <p>Fiyatlar teklif bazlıdır; sipariş sonrası iletilir.</p>
         </div>
       </div>

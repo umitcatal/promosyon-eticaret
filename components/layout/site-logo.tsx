@@ -24,13 +24,13 @@ export async function SiteLogo({ href = "/", tone = "light" }: SiteLogoProps) {
         tone === "dark" ? "text-paper" : "text-ink"
       }`}
     >
-      Promosyon{" "}
+      Kurumsal{" "}
       <span
         className={`italic ${
           tone === "dark" ? "text-brass-300" : "text-brand-600"
         }`}
       >
-        Eticaret
+        Promo
       </span>
     </span>
   );
