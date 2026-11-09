@@ -13,6 +13,7 @@
 @theme {
   --color-paper: #faf8f3;
   --color-surface: #f3efe6;
+  --color-sheet: #ffffff;
   --color-ink: #14130f;
   --color-ink-muted: #4b4a42;
   --color-line: #e6dfd1;
@@ -268,6 +269,65 @@ body {
   background: var(--color-surface);
   color: var(--color-ink);
   font-weight: 600;
+}
+
+/*
+ * CMS pages render as a white sheet lifted off the warm desk background.
+ * Typography refinements stay scoped here because .rich-text is shared with
+ * the product page, SEO blocks and the TipTap editor.
+ */
+.paper-sheet {
+  background: var(--color-sheet);
+  border: 1px solid var(--color-line);
+  border-radius: 2px;
+  box-shadow:
+    0 1px 2px rgba(20, 19, 15, 0.05),
+    0 12px 24px -12px rgba(20, 19, 15, 0.12),
+    0 40px 70px -40px rgba(20, 19, 15, 0.3);
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+@media (max-width: 640px) {
+  .paper-sheet {
+    box-shadow:
+      0 1px 2px rgba(20, 19, 15, 0.05),
+      0 12px 24px -12px rgba(20, 19, 15, 0.12);
+  }
+}
+
+.paper-sheet .rich-text {
+  overflow-wrap: break-word;
+}
+
+.paper-sheet .rich-text > p:first-child {
+  color: var(--color-ink);
+  font-size: 1.075rem;
+  line-height: 1.8;
+}
+
+/* TipTap tables may carry pixel widths/min-widths. The block scrollport must
+ * ignore them (min-width wins over max-width, hence !important); the anonymous
+ * table box inside still honors col widths and scrolls when genuinely wide. */
+.paper-sheet .rich-text table {
+  display: block;
+  max-width: 100%;
+  min-width: 0 !important;
+  overflow-x: auto;
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-width: thin;
+}
+
+.paper-sheet .rich-text table::-webkit-scrollbar {
+  height: 4px;
+}
+
+.paper-sheet .rich-text table::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 999px;
+}
+
+.paper-sheet .rich-text table::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .ProseMirror img.ProseMirror-selectednode {

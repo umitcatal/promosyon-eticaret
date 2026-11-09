@@ -19,6 +19,12 @@ export function formatDateTime(value: string): string {
   }).format(parseSqliteDate(value));
 }
 
+export function formatDate(value: string): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "long",
+  }).format(parseSqliteDate(value));
+}
+
 export function firstImage(imagesJson: string | null | undefined): string | null {
   if (!imagesJson) return null;
   try {
