@@ -12,7 +12,7 @@ type TurnstileApi = {
       "response-field": boolean;
       callback: (token: string) => void;
       "expired-callback": () => void;
-      "error-callback": () => void;
+      "error-callback": (errorCode?: string | number) => void;
     }
   ) => string;
   reset: (widgetId: string) => void;
@@ -40,16 +40,22 @@ export function Turnstile({
   const widgetIdRef = useRef<string | null>(null);
   const initialResetKeyRef = useRef(resetKey);
   const [token, setToken] = useState("");
+  const [failed, setFailed] = useState(false);
 
   const clearToken = useCallback(() => {
     setToken("");
     onTokenChange("");
   }, [onTokenChange]);
 
-  const handleError = useCallback(() => {
-    clearToken();
-    onError("Güvenlik doğrulaması yüklenemedi. Lütfen tekrar deneyin.");
-  }, [clearToken, onError]);
+  const handleError = useCallback(
+    (errorCode?: string | number) => {
+      console.error("[Turnstile] hata:", errorCode ?? "script yüklenemedi");
+      setFailed(true);
+      clearToken();
+      onError("Güvenlik doğrulaması yüklenemedi. Lütfen tekrar deneyin.");
+    },
+    [clearToken, onError]
+  );
 
   const renderWidget = useCallback(() => {
     if (
@@ -67,6 +73,7 @@ export function Turnstile({
       "response-field": false,
       callback: (nextToken) => {
         setToken(nextToken);
+        setFailed(false);
         onTokenChange(nextToken);
         onError("");
       },
@@ -74,6 +81,31 @@ export function Turnstile({
       "error-callback": handleError,
     });
   }, [clearToken, handleError, onError, onTokenChange, siteKey]);
+
+  const retry = useCallback(() => {
+    setFailed(false);
+    onError("");
+    if (window.turnstile) {
+      if (widgetIdRef.current !== null) {
+        window.turnstile.reset(widgetIdRef.current);
+      } else {
+        renderWidget();
+      }
+      return;
+    }
+    // next/script başarısız yüklemeyi src bazında önbelleğe alır; yeniden denemek için elle yükleniyor
+    document
+      .querySelectorAll(
+        'script[src^="https://challenges.cloudflare.com/turnstile"]'
+      )
+      .forEach((el) => el.remove());
+    const el = document.createElement("script");
+    el.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    el.async = true;
+    el.onload = () => renderWidget();
+    el.onerror = () => handleError();
+    document.body.appendChild(el);
+  }, [handleError, onError, renderWidget]);
 
   useEffect(() => {
     renderWidget();
@@ -99,9 +131,18 @@ export function Turnstile({
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onLoad={renderWidget}
-        onError={handleError}
+        onError={() => handleError()}
       />
       <div ref={containerRef} />
+      {failed ? (
+        <button
+          className="mt-2 text-sm font-semibold text-orange-600 hover:text-orange-700"
+          onClick={retry}
+          type="button"
+        >
+          Tekrar dene
+        </button>
+      ) : null}
       <input name="cf-turnstile-response" type="hidden" value={token} />
     </div>
   );
