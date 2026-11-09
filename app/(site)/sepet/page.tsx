@@ -1,10 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { Metadata } from "next";
 import Link from "next/link";
-import {
-  removeCartItemAction,
-  updateCartItemAction,
-} from "@/app/actions/cart";
+import { removeCartItemAction } from "@/app/actions/cart";
+import { CartQuantity } from "@/components/cart/cart-quantity";
 import { CheckoutForm } from "@/components/cart/checkout-form";
 import { ProductImage } from "@/components/catalog/product-image";
 import { firstImage, formatPrice } from "@/lib/format";
@@ -149,41 +147,7 @@ export default async function CartPage() {
                   </div>
 
                   <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
-                    <div className="flex items-center rounded-lg border border-zinc-300">
-                      <form action={updateCartItemAction}>
-                        <input name="variantId" type="hidden" value={row.id} />
-                        <input
-                          name="quantity"
-                          type="hidden"
-                          value={quantity - 1}
-                        />
-                        <button
-                          aria-label="Adet azalt"
-                          className="flex h-9 w-9 items-center justify-center text-zinc-600 transition hover:text-orange-600"
-                          type="submit"
-                        >
-                          −
-                        </button>
-                      </form>
-                      <span className="w-9 text-center text-sm font-semibold">
-                        {quantity}
-                      </span>
-                      <form action={updateCartItemAction}>
-                        <input name="variantId" type="hidden" value={row.id} />
-                        <input
-                          name="quantity"
-                          type="hidden"
-                          value={quantity + 1}
-                        />
-                        <button
-                          aria-label="Adet artır"
-                          className="flex h-9 w-9 items-center justify-center text-zinc-600 transition hover:text-orange-600"
-                          type="submit"
-                        >
-                          +
-                        </button>
-                      </form>
-                    </div>
+                    <CartQuantity quantity={quantity} variantId={row.id} />
 
                     <div className="text-right">
                       {price ? (
