@@ -35,7 +35,7 @@ export default async function AdminSettingsPage() {
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
         <h3 className="text-base font-bold text-zinc-900">Site Logosu</h3>
         <p className="mt-1 text-sm leading-6 text-zinc-500">
-          Yüklenen logo, sitede &quot;Promosyon Eticaret&quot; yazısının
+          Yüklenen logo, sitede &quot;Kurumsal Promo&quot; yazısının
           göründüğü header ve footer alanlarında gösterilir. Logo
           yüklenmediğinde yazı korunur.
         </p>

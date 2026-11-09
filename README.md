@@ -1,4 +1,4 @@
-# Promosyon Eticaret
+# Kurumsal Promo
 
 Kurumsal promosyon ürünleri satan, ürün/kategori verilerini XML beslemesinden
 çeken Next.js tabanlı e-ticaret uygulaması.

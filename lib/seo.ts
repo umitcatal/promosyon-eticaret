@@ -3,7 +3,7 @@ export const SITE_BASE =
 
 export const openGraphBase = {
   type: "website",
-  siteName: "Promosyon Eticaret",
+  siteName: "Kurumsal Promo",
   locale: "tr_TR",
 } as const;
 

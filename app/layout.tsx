@@ -26,8 +26,8 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_BASE),
   title: {
-    default: "Promosyon Eticaret | Kurumsal Promosyon Ürünleri",
-    template: "%s | Promosyon Eticaret",
+    default: "Kurumsal Promo | Kurumsal Promosyon Ürünleri",
+    template: "%s | Kurumsal Promo",
   },
   description:
     "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası. Şirket logonuzla özelleştirilebilen yüzlerce ürün.",

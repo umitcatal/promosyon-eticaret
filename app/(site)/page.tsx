@@ -5,12 +5,12 @@ import { openGraphBase } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Promosyon Eticaret | Kurumsal Promosyon Ürünleri",
+    absolute: "Kurumsal Promo | Kurumsal Promosyon Ürünleri",
   },
   description:
     "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası. Şirket logonuzla özelleştirilebilen yüzlerce ürün.",
   alternates: { canonical: "/" },
-  openGraph: { ...openGraphBase, url: "/", title: "Promosyon Eticaret" },
+  openGraph: { ...openGraphBase, url: "/", title: "Kurumsal Promo" },
 };
 
 export default async function HomePage() {

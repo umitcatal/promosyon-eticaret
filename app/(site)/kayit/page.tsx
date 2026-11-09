@@ -26,7 +26,7 @@ export default async function SignupPage({
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link className="text-2xl font-bold text-zinc-900" href="/">
-            Promosyon<span className="text-orange-600">Eticaret</span>
+            Kurumsal <span className="text-orange-600">Promo</span>
           </Link>
           <h1 className="mt-4 text-xl font-semibold text-zinc-900">
             Yeni hesap oluşturun

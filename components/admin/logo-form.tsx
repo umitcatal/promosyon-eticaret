@@ -33,8 +33,8 @@ export function LogoForm({ logoUrl }: { logoUrl: string | null }) {
         </div>
       ) : (
         <p className="text-sm text-zinc-500">
-          Henüz logo yüklenmedi; header ve footer&apos;de &quot;Promosyon
-          Eticaret&quot; yazısı gösterilir.
+          Henüz logo yüklenmedi; header ve footer&apos;de &quot;Kurumsal
+          Promo&quot; yazısı gösterilir.
         </p>
       )}
 
