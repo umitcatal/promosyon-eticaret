@@ -9,10 +9,16 @@ import {
 } from "@/components/catalog/product-detail";
 import { RecentlyViewedTracker } from "@/components/catalog/recently-viewed-tracker";
 import { SimilarProducts } from "@/components/catalog/similar-products";
+import { WhatsAppShareButton } from "@/components/catalog/whatsapp-share-button";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { getProductBySlug } from "@/lib/queries";
-import { absoluteImages, isSafeSlug, openGraphBase } from "@/lib/seo";
+import {
+  absoluteImages,
+  absoluteUrl,
+  isSafeSlug,
+  openGraphBase,
+} from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -35,6 +41,7 @@ export async function generateMetadata({
   const images = absoluteImages(
     data.variants.flatMap((variant) => parseImages(variant.images)).at(0)
   );
+  const ogImage = images[0];
 
   return {
     title,
@@ -45,7 +52,13 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      images: images.length > 0 ? images : undefined,
+      images: ogImage ? [{ url: ogImage, alt: product.name }] : openGraphBase.images,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
     },
   };
 }
@@ -106,6 +119,8 @@ async function ProductContent({
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+  const shareUrl = absoluteUrl(`/urun/${product.slug}`);
+
   const crumbs: Crumb[] = [
     { href: "/", label: "Ana Sayfa" },
     ...(parent ? [{ href: `/kategori/${parent.slug}`, label: parent.name }] : []),
@@ -126,10 +141,14 @@ async function ProductContent({
             {product.name}
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="border-b border-line pb-1 font-mono text-[11px] tracking-[0.16em] text-ink-muted uppercase">
             Kod {product.code}
           </p>
+          <WhatsAppShareButton
+            title={product.name}
+            url={shareUrl ?? `/urun/${product.slug}`}
+          />
           <FavoriteButton productId={product.id} showLabel />
         </div>
       </header>

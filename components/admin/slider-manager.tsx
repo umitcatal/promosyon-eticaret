@@ -143,18 +143,6 @@ function NewSlideFields() {
           </p>
         </div>
         <div>
-          <label className={labelClass} htmlFor="new-title">
-            Başlık
-          </label>
-          <input className={inputClass} id="new-title" name="title" />
-        </div>
-        <div>
-          <label className={labelClass} htmlFor="new-subtitle">
-            Alt başlık
-          </label>
-          <input className={inputClass} id="new-subtitle" name="subtitle" />
-        </div>
-        <div>
           <label className={labelClass} htmlFor="new-link">
             Bağlantı
           </label>
@@ -246,22 +234,6 @@ function EditSlideForm({ slide }: { slide: SliderItem }) {
         <p className="mt-1 text-xs text-zinc-400">
           Boş bırakılırsa mevcut görsel korunur.
         </p>
-      </div>
-      <div>
-        <label className={labelClass}>Başlık</label>
-        <input
-          className={inputClass}
-          defaultValue={slide.title ?? ""}
-          name="title"
-        />
-      </div>
-      <div>
-        <label className={labelClass}>Alt başlık</label>
-        <input
-          className={inputClass}
-          defaultValue={slide.subtitle ?? ""}
-          name="subtitle"
-        />
       </div>
       <div className="sm:col-span-2">
         <label className={labelClass}>Bağlantı</label>
@@ -407,10 +379,10 @@ export function SliderManager({ slides }: { slides: SliderItem[] }) {
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-zinc-900">
-                  {slide.title || `Slayt #${index + 1}`}
+                  {`Slayt #${index + 1}`}
                 </p>
                 <p className="truncate text-xs text-zinc-500">
-                  {slide.subtitle || slide.link || "Başlık ve bağlantı yok"}
+                  {slide.link || "Bağlantı yok"}
                 </p>
               </div>
 

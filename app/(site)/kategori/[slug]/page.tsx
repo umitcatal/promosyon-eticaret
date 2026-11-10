@@ -49,7 +49,7 @@ export async function generateMetadata({
       title,
       description,
       url: canonical,
-      images: images.length > 0 ? images : undefined,
+      images: images.length > 0 ? images : openGraphBase.images,
     },
   };
 }

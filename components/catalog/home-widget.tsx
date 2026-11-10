@@ -101,13 +101,13 @@ function BannerCard({
   );
 }
 
-async function SliderWidget({ widget }: { widget: HomeWidgetWithBanners }) {
+async function SliderWidget() {
   const slides = await getSliderItems();
 
   return (
     <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:pt-6">
       {slides.length > 0 ? (
-        <Slider eyebrow={widget.eyebrow} slides={slides} />
+        <Slider slides={slides} />
       ) : (
         <HeroFallback />
       )}
@@ -420,7 +420,7 @@ export async function HomeWidgetSection({
 }) {
   switch (widget.type) {
     case "slider":
-      return <SliderWidget widget={widget} />;
+      return <SliderWidget />;
     case "categories":
       return <CategoriesWidget widget={widget} />;
     case "featured_products":
