@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logoutAction } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
+import { Dropdown } from "./dropdown";
 
 export async function UserMenu() {
   const user = await getCurrentUser();
@@ -25,7 +26,7 @@ export async function UserMenu() {
   }
 
   return (
-    <details className="group relative">
+    <Dropdown className="group relative">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-sm border border-line px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-muted transition-colors hover:border-line-strong hover:text-ink">
         <span className="flex size-6 items-center justify-center rounded-sm bg-brand-600 font-display text-xs font-semibold text-paper">
           {user.firstName.charAt(0).toUpperCase()}
@@ -82,6 +83,6 @@ export async function UserMenu() {
           </button>
         </form>
       </div>
-    </details>
+    </Dropdown>
   );
 }
