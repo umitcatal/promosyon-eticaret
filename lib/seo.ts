@@ -10,8 +10,8 @@ export const openGraphBase: NonNullable<Metadata["openGraph"]> = {
   images: [
     {
       url: "/logo-meta.jpg",
-      width: 500,
-      height: 5010,
+      width: 1200,
+      height: 630,
       alt: "Kurumsal Promo - Kurumsal Promosyon Ürünleri",
     },
   ],
