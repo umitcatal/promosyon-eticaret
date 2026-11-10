@@ -33,7 +33,10 @@ export const metadata: Metadata = {
     "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası. Şirket logonuzla özelleştirilebilen yüzlerce ürün.",
   robots: { index: true, follow: true },
   openGraph: { ...openGraphBase },
-  twitter: { card: "summary_large_image" },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/logo-meta.jpg"],
+  },
   icons: {
     icon: [
       { url: "/favicon/favicon-32x32.png", type: "image/png", sizes: "32x32" },
