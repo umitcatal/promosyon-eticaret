@@ -1,0 +1,22 @@
+{
+  "name": "Kurumsal Promo",
+  "short_name": "Kurumsal Promo",
+  "description": "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf8f3",
+  "theme_color": "#faf8f3",
+  "icons": [
+    {
+      "src": "/favicon/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -34,6 +34,18 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
   openGraph: { ...openGraphBase },
   twitter: { card: "summary_large_image" },
+  icons: {
+    icon: [
+      { url: "/favicon/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: {
+      url: "/favicon/apple-touch-icon.png",
+      type: "image/png",
+      sizes: "180x180",
+    },
+  },
+  manifest: "/favicon/site.webmanifest",
 };
 
 export const viewport: Viewport = {
