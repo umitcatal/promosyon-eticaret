@@ -5,7 +5,7 @@ export const SITE_BASE =
 
 export const openGraphBase: NonNullable<Metadata["openGraph"]> = {
   type: "website",
-  siteName: "Kurumsal Promo",
+  siteName: "Kurumsal Promo | Kurumsal Promosyon Ürünleri",
   locale: "tr_TR",
   images: [
     {
