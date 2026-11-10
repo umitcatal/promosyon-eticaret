@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { SITE_BASE } from "@/lib/seo";
 import { startSession } from "@/lib/session";
 import { safeNextPath } from "@/lib/url";
 import {
@@ -23,17 +24,18 @@ type GoogleUserInfo = {
   name?: string;
 };
 
-function fail(request: Request, reason: string) {
-  return Response.redirect(new URL(`/giris?error=${reason}`, request.url));
+function fail(base: string, reason: string) {
+  return Response.redirect(new URL(`/giris?error=${reason}`, base));
 }
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const base = redirectUri ?? SITE_BASE;
 
   if (!clientId || !clientSecret || !redirectUri) {
-    return fail(request, "google");
+    return fail(base, "google");
   }
 
   const url = new URL(request.url);
@@ -50,7 +52,7 @@ export async function GET(request: Request) {
   cookieStore.delete("google_oauth_next");
 
   if (!code || !state || !expectedState || state !== expectedState || !codeVerifier) {
-    return fail(request, "durum");
+    return fail(base, "durum");
   }
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
@@ -67,7 +69,7 @@ export async function GET(request: Request) {
   });
   const token = (await tokenResponse.json()) as GoogleTokenResponse;
   if (!tokenResponse.ok || !token.access_token) {
-    return fail(request, "token");
+    return fail(base, "token");
   }
 
   const infoResponse = await fetch(
@@ -76,7 +78,7 @@ export async function GET(request: Request) {
   );
   const info = (await infoResponse.json()) as GoogleUserInfo;
   if (!infoResponse.ok || !info.sub || !info.email) {
-    return fail(request, "profil");
+    return fail(base, "profil");
   }
 
   let user = findUserByGoogleId(info.sub) ?? findUserByEmail(info.email);
@@ -94,9 +96,9 @@ export async function GET(request: Request) {
       googleId: info.sub,
     });
     user = findUserByGoogleId(info.sub) ?? findUserByEmail(info.email);
-    if (!user) return fail(request, "kayit");
+    if (!user) return fail(base, "kayit");
   }
 
   await startSession(user.id);
-  return Response.redirect(new URL(safeNextPath(next), request.url));
+  return Response.redirect(new URL(safeNextPath(next), base));
 }

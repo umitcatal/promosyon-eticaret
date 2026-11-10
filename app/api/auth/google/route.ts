@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
+import { SITE_BASE } from "@/lib/seo";
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
   const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
-    return Response.redirect(new URL("/giris?error=google", request.url));
+    return Response.redirect(new URL("/giris?error=google", redirectUri ?? SITE_BASE));
   }
 
   const state = randomBytes(16).toString("base64url");

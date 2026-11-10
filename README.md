@@ -70,7 +70,7 @@ npm run dev
 | `PRICE_XML_URL` | Fiyat XML/API adresi (henüz yok, admin panelden de girilebilir) |
 | `SYNC_SECRET` | `/api/sync` uç noktası için Bearer anahtarı |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google ile giriş (boşsa buton gizlenir) |
-| `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/google/callback` |
+| `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/callback/google` |
 | `ADMIN_*` | `npm run db:admin` için varsayılan admin bilgileri |
 
 Cloudflare Turnstile widget’ında sitenin hostname’ini (yerel geliştirme için
@@ -82,9 +82,11 @@ aynı hostname’i içermelidir; secret key yalnızca sunucu ortamında tutulmal
 1. Google Cloud Console > APIs & Services > Credentials bölümünde OAuth Client
    (Web application) oluşturun.
 2. Authorized redirect URI olarak
-   `https://<domain>/api/auth/google/callback` ekleyin.
+   `https://<domain>/api/auth/callback/google` ekleyin.
 3. `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` ve `GOOGLE_REDIRECT_URI`
-   değerlerini `.env.local` dosyasına yazın.
+   değerlerini `.env.local` dosyasına yazın. `GOOGLE_REDIRECT_URI` production'da
+   public `https://` origin'i olmalı ve Console'daki yetkili URI ile birebir
+   eşleşmeli; login dönüş adresi bu değerden türetilir.
 
 ## XML Senkronizasyonu
 
