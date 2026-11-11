@@ -27,7 +27,11 @@ jobs:
           script: |
             set -e
             cd /var/www/kurumsalpromo
-            git pull --ff-only
+            # Sunucu bir deploy hedefi: yerel commit/force-push farklarını tolere etmek için
+            # fast-forward yerine origin/main'e birebir eşitle. .env ve public/uploads
+            # gitignore'da olduğu için reset --hard bunlara dokunmaz.
+            git fetch --prune origin main
+            git reset --hard origin/main
             npm install
             npm run build
             pm2 restart kurumsalpromo
