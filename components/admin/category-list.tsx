@@ -2,6 +2,7 @@
 
 import { useActionState, useDeferredValue, useMemo, useState } from "react";
 import { updateCategoryBulkAction } from "@/app/actions/admin";
+import { CategoryCreateDialog } from "@/components/admin/category-create-dialog";
 import {
   CategoryForm,
   type CategoryAdminRow,
@@ -13,6 +14,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/ui/styles";
+import type { CategoryOption } from "@/lib/types";
 
 type StatusFilter = "all" | "active" | "passive";
 type ImageFilter = "all" | "missing" | "present";
@@ -137,6 +139,18 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
     [rows],
   );
 
+  const categoryOptions = useMemo<CategoryOption[]>(
+    () =>
+      rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        parent_id: row.parent_id,
+        active: row.active,
+        sort_order: row.sort_order,
+      })),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     const term = normalizeTr(deferredQuery.trim());
     return rows.filter((row) => {
@@ -178,12 +192,15 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-zinc-900">Kategoriler</h2>
-        <p className="text-sm text-zinc-500">
-          Gösterilen {filtered.length} / {rows.length} kategori • Ana sayfadaki
-          Ürün Grupları bölümünde gösterilecek kategorileri buradan seçin
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-zinc-900">Kategoriler</h2>
+          <p className="text-sm text-zinc-500">
+            Gösterilen {filtered.length} / {rows.length} kategori • Ana sayfadaki
+            Ürün Grupları bölümünde gösterilecek kategorileri buradan seçin
+          </p>
+        </div>
+        <CategoryCreateDialog categories={categoryOptions} />
       </div>
 
       <div className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4">

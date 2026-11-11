@@ -28,6 +28,9 @@ export type RecentlyViewedSliderProps = {
   linkLabel: string | null;
   subtitle: string | null;
   title: string | null;
+  excludeProductId?: number;
+  embedded?: boolean;
+  titleClassName?: string;
 };
 
 export function RecentlyViewedSlider({
@@ -38,6 +41,9 @@ export function RecentlyViewedSlider({
   linkLabel,
   subtitle,
   title,
+  excludeProductId,
+  embedded = false,
+  titleClassName,
 }: RecentlyViewedSliderProps) {
   const [products, setProducts] = useState<ProductListItem[] | null>(null);
   const limit =
@@ -45,7 +51,9 @@ export function RecentlyViewedSlider({
     RECENTLY_VIEWED_MAX_ITEMS;
 
   useEffect(() => {
-    const ids = readRecentlyViewedIds().slice(0, limit);
+    const ids = readRecentlyViewedIds()
+      .filter((id) => id !== excludeProductId)
+      .slice(0, limit);
     if (ids.length === 0) return;
 
     let cancelled = false;
@@ -56,7 +64,9 @@ export function RecentlyViewedSlider({
           if (cancelled) return;
           setProducts(
             Array.isArray(payload?.products)
-              ? payload.products.slice(0, limit)
+              ? payload.products
+                  .filter((product) => product.id !== excludeProductId)
+                  .slice(0, limit)
               : []
           );
         }
@@ -68,7 +78,7 @@ export function RecentlyViewedSlider({
     return () => {
       cancelled = true;
     };
-  }, [limit]);
+  }, [excludeProductId, limit]);
 
   if (!products || products.length === 0) return null;
 
@@ -78,10 +88,15 @@ export function RecentlyViewedSlider({
     carouselClassNames(config);
 
   return (
-    <Reveal className="mx-auto w-full max-w-7xl px-4">
-      <section className="mt-20 sm:mt-28">
+    <Reveal className={embedded ? undefined : "mx-auto w-full max-w-7xl px-4"}>
+      <section
+        className={
+          embedded ? "mt-12 border-t border-line pt-8" : "mt-20 sm:mt-28"
+        }
+      >
         <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
           <WidgetHeading
+            titleClassName={titleClassName}
             widget={{ eyebrow, subtitle, title: headingTitle }}
           />
           <WidgetLink label={linkLabel} link={link} />

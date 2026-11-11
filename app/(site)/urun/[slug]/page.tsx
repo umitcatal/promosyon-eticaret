@@ -7,12 +7,15 @@ import {
   ProductDetail,
   type ProductDetailVariant,
 } from "@/components/catalog/product-detail";
+import { RecentlyViewedSlider } from "@/components/catalog/recently-viewed-slider";
 import { RecentlyViewedTracker } from "@/components/catalog/recently-viewed-tracker";
 import { SimilarProducts } from "@/components/catalog/similar-products";
 import { WhatsAppShareButton } from "@/components/catalog/whatsapp-share-button";
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
+import { DEFAULT_CAROUSEL_STYLE } from "@/lib/home-widgets";
 import { getProductBySlug } from "@/lib/queries";
+import { RECENTLY_VIEWED_MAX_ITEMS } from "@/lib/recently-viewed";
 import {
   absoluteImages,
   absoluteUrl,
@@ -38,9 +41,11 @@ export async function generateMetadata({
     descriptionToText(product.description).slice(0, 160) ||
     `${product.name} - kurumsal promosyon ürünü.`;
   const canonical = isSafeSlug(slug) ? `/urun/${slug}` : undefined;
-  const images = absoluteImages(
-    data.variants.flatMap((variant) => parseImages(variant.images)).at(0)
+  const productImages = parseImages(product.images);
+  const variantImages = data.variants.flatMap((variant) =>
+    parseImages(variant.images)
   );
+  const images = absoluteImages(productImages[0], variantImages[0]);
   const ogImage = images[0];
 
   return {
@@ -102,6 +107,7 @@ async function ProductContent({
   if (!data) notFound();
 
   const { product, variants, category, parent } = data;
+  const productImages = parseImages(product.images);
 
   const detailVariants: ProductDetailVariant[] = variants.map((variant) => ({
     id: variant.id,
@@ -154,7 +160,11 @@ async function ProductContent({
       </header>
 
       <div className="mt-10">
-        <ProductDetail productName={product.name} variants={detailVariants} />
+        <ProductDetail
+          productImages={productImages}
+          productName={product.name}
+          variants={detailVariants}
+        />
       </div>
 
       {description ? (
@@ -193,6 +203,19 @@ async function ProductContent({
       <RecentlyViewedTracker productId={product.id} />
 
       <SimilarProducts category={category} productId={product.id} />
+
+      <RecentlyViewedSlider
+        config={DEFAULT_CAROUSEL_STYLE}
+        embedded
+        excludeProductId={product.id}
+        eyebrow={null}
+        itemLimit={RECENTLY_VIEWED_MAX_ITEMS}
+        link={null}
+        linkLabel={null}
+        subtitle={null}
+        title="Son Gezilen Ürünler"
+        titleClassName="mt-3 font-display text-2xl leading-none font-semibold tracking-tight text-ink sm:text-3xl"
+      />
     </div>
   );
 }

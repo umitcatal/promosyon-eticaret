@@ -1,5 +1,6 @@
 import { backfillCategoryImages } from "./category-images";
 import { db, setSetting } from "./db";
+import { MANUAL_ID_BASE } from "./manual-products";
 import { slugify } from "./slug";
 import {
   cleanDescription,
@@ -53,6 +54,7 @@ export function prepareRecords(records: XmlRecord[]): PreparedRecord[] {
     const productId = Number(record.urun_id);
     const variantId = Number(record.urunattr_id);
     if (!Number.isFinite(productId) || !Number.isFinite(variantId)) continue;
+    if (productId >= MANUAL_ID_BASE || variantId >= MANUAL_ID_BASE) continue;
     prepared.push({
       productId,
       productCode: (record.urunkodu ?? "").trim(),
@@ -139,7 +141,7 @@ export async function syncCatalog(): Promise<SyncResult> {
     "SELECT id FROM products WHERE slug = ?"
   );
   const findProductCode = db.prepare(
-    "SELECT id FROM products WHERE code = ?"
+    "SELECT id, source FROM products WHERE code = ?"
   );
   const setProductCode = db.prepare(
     "UPDATE products SET code = ? WHERE id = ?"
@@ -247,10 +249,10 @@ export async function syncCatalog(): Promise<SyncResult> {
 
       let productCode = base.productCode || String(productId);
       const codeOwner = findProductCode.get(productCode) as
-        | { id: number }
+        | { id: number; source: string }
         | undefined;
       if (codeOwner && codeOwner.id !== productId) {
-        if (incomingIds.has(codeOwner.id)) {
+        if (codeOwner.source === "manual" || incomingIds.has(codeOwner.id)) {
           productCode = findFreeCode(`${productCode}-${productId}`);
         } else {
           const freedCode = findFreeCode(
@@ -296,12 +298,16 @@ export async function syncCatalog(): Promise<SyncResult> {
 
     const deactivatedProducts = db
       .prepare(
-        "UPDATE products SET active = 0 WHERE active = 1 AND id NOT IN (SELECT id FROM sync_seen_products)"
+        `UPDATE products SET active = 0
+         WHERE active = 1 AND source = 'xml'
+           AND id NOT IN (SELECT id FROM sync_seen_products)`
       )
       .run().changes;
     const deactivatedVariants = db
       .prepare(
-        "UPDATE variants SET active = 0 WHERE active = 1 AND id NOT IN (SELECT id FROM sync_seen_variants)"
+        `UPDATE variants SET active = 0
+         WHERE active = 1 AND source = 'xml'
+           AND id NOT IN (SELECT id FROM sync_seen_variants)`
       )
       .run().changes;
 

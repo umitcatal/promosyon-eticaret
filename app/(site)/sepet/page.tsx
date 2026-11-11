@@ -23,6 +23,7 @@ type CartRow = {
   id: number;
   attr_name: string | null;
   images: string;
+  product_images: string;
   price: number | null;
   product_name: string;
   product_slug: string;
@@ -39,7 +40,7 @@ export default async function CartPage() {
     variantIds.length > 0
       ? (db
           .prepare(
-            `SELECT v.id, v.attr_name, v.images, v.price,
+            `SELECT v.id, v.attr_name, v.images, p.images AS product_images, v.price,
                     p.name AS product_name, p.slug AS product_slug, p.code
              FROM variants v
              JOIN products p ON p.id = v.product_id
@@ -96,7 +97,7 @@ export default async function CartPage() {
       <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-3">
           {rows.map((row) => {
-            const image = firstImage(row.images);
+            const image = firstImage(row.images) ?? firstImage(row.product_images);
             const quantity = cart[String(row.id)] ?? 1;
             const price = formatPrice(row.price);
             const lineTotal = formatPrice(

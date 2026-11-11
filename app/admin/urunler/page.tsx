@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Pagination } from "@/components/catalog/pagination";
+import { ProductCreateDialog } from "@/components/admin/product-create-dialog";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/format";
+import { fetchAdminCategoryOptions } from "@/lib/queries";
 
 export const instant = false;
 
@@ -15,6 +17,7 @@ type ProductAdminRow = {
   id: number;
   code: string;
   name: string;
+  source: string;
   is_featured: number;
   is_hidden: number;
   active: number;
@@ -46,8 +49,8 @@ export default async function AdminProductsPage({
 
   const rows = db
     .prepare(
-      `SELECT p.id, p.code, p.name, p.is_featured, p.is_hidden, p.active,
-        c.name AS category_name,
+      `SELECT p.id, p.code, p.name, p.source, p.is_featured, p.is_hidden,
+        p.active, c.name AS category_name,
         (SELECT COUNT(*) FROM variants v WHERE v.product_id = p.id) AS variant_count,
         (SELECT MIN(v.price) FROM variants v WHERE v.product_id = p.id AND v.price IS NOT NULL) AS min_price,
         (SELECT MAX(v.price) FROM variants v WHERE v.product_id = p.id AND v.price IS NOT NULL) AS max_price
@@ -60,6 +63,7 @@ export default async function AdminProductsPage({
     .all(...filterParams, PAGE_SIZE, offset) as ProductAdminRow[];
 
   const paginationQuery: Record<string, string> = q ? { q } : {};
+  const categories = fetchAdminCategoryOptions();
 
   return (
     <div className="space-y-4">
@@ -68,21 +72,24 @@ export default async function AdminProductsPage({
           <h2 className="text-lg font-bold text-zinc-900">Ürünler</h2>
           <p className="text-sm text-zinc-500">{total} ürün</p>
         </div>
-        <form className="flex gap-2" method="GET">
-          <input
-            className="w-64 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-orange-500"
-            defaultValue={q}
-            name="q"
-            placeholder="Ürün adı veya kodu ara..."
-            type="search"
-          />
-          <button
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
-            type="submit"
-          >
-            Ara
-          </button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <form className="flex gap-2" method="GET">
+            <input
+              className="w-64 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-orange-500"
+              defaultValue={q}
+              name="q"
+              placeholder="Ürün adı veya kodu ara..."
+              type="search"
+            />
+            <button
+              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-700"
+              type="submit"
+            >
+              Ara
+            </button>
+          </form>
+          <ProductCreateDialog categories={categories} />
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-200 bg-white">
@@ -126,6 +133,11 @@ export default async function AdminProductsPage({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
+                      {row.source === "manual" ? (
+                        <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">
+                          Manuel
+                        </span>
+                      ) : null}
                       {row.is_hidden ? (
                         <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-semibold text-zinc-500">
                           Gizli

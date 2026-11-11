@@ -277,6 +277,9 @@ ensureColumn(
 );
 ensureColumn("products", "meta_title", "TEXT");
 ensureColumn("products", "meta_description", "TEXT");
+ensureColumn("products", "source", "TEXT NOT NULL DEFAULT 'xml'");
+ensureColumn("variants", "source", "TEXT NOT NULL DEFAULT 'xml'");
+ensureColumn("products", "images", "TEXT NOT NULL DEFAULT '[]'");
 ensureColumn("categories", "meta_title", "TEXT");
 ensureColumn("categories", "meta_description", "TEXT");
 

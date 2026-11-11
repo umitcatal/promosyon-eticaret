@@ -18,7 +18,8 @@ function firstImageUrl(raw: string | null): string | null {
 export function backfillCategoryImages(): number {
   const candidateRows = db
     .prepare(
-      `SELECT p.category_id AS category_id, v.images AS images
+      `SELECT p.category_id AS category_id, p.images AS product_images,
+              v.images AS images
        FROM products p
        JOIN variants v ON v.product_id = p.id
        WHERE p.active = 1 AND p.is_hidden = 0
@@ -26,12 +27,16 @@ export function backfillCategoryImages(): number {
          AND p.category_id IS NOT NULL
        ORDER BY p.is_featured DESC, p.id DESC, v.id ASC`
     )
-    .all() as { category_id: number; images: string | null }[];
+    .all() as {
+    category_id: number;
+    product_images: string | null;
+    images: string | null;
+  }[];
 
   const ownImage = new Map<number, string>();
   for (const row of candidateRows) {
     if (ownImage.has(row.category_id)) continue;
-    const url = firstImageUrl(row.images);
+    const url = firstImageUrl(row.product_images) ?? firstImageUrl(row.images);
     if (url) ownImage.set(row.category_id, url);
   }
 

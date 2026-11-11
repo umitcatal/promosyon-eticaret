@@ -148,6 +148,26 @@ Ayrıca her senkronda:
 yeni bir ürün devralırsa eski satırın kodu `KOD-ID` biçimine çevrilir (eski
 ürün zaten pasife alınır) ve sonuç `codeTransfers` olarak raporlanır.
 
+### Manuel Ürünler
+
+Admin > Ürünler ekranındaki **Yeni Ürün Ekle** butonuyla beslemeden bağımsız
+ürün oluşturulabilir. Manuel ürün ve varyantlar `source='manual'` olarak
+işaretlenir ve `1.000.000.000` ve üzeri pozitif ID alır; XML senkronizasyonu bu
+satırları pasife almaz, kodlarını değiştirmez ve fiyatlarını güncellemez.
+
+- Ürün görselleri virgülle ayrılmış `http(s)` URL'leri olarak
+  `products.images` alanında saklanır.
+- Varyant görselleri URL ve/veya dosya yüklemesiyle eklenir. Yüklenen dosyalar
+  `sharp` ile en fazla 1600×1600 WebP (kalite 82) olarak
+  `public/uploads/products/` altına yazılır.
+- Ürün detay galerisi önce ürün URL görsellerini, ardından seçili varyantın
+  görsellerini tekrarsız gösterir. Ürün kartları ürün görseli yoksa ilk varyant
+  görselini kullanır.
+- `public/uploads/products/` klasörünü de yedeğe dahil edin.
+
+Şema değişiklikleri (`source`, `images`) uygulama ilk açılışta `ensureColumn`
+ile mevcut veritabanına eklenir; backfill gerekmez, PM2 restart yeterlidir.
+
 ## Yayına Alma (VPS)
 
 ```bash
@@ -157,9 +177,9 @@ npm run start        # varsayılan port 3000
 ```
 
 - SQLite dosyası `data/` klasöründe tutulur; düzenli yedekleyin.
-- Slider, kategori ve logo görselleri `public/uploads/slider/`,
-  `public/uploads/categories/` ve `public/uploads/logo/` altında tutulur; bu
-  klasörleri de yedekleyin.
+- Slider, kategori, logo ve ürün görselleri `public/uploads/slider/`,
+  `public/uploads/categories/`, `public/uploads/logo/` ve
+  `public/uploads/products/` altında tutulur; bu klasörleri de yedekleyin.
 - `data/` ve `public/uploads/` klasörleri sürüm kontrolüne dahil edilmez.
 - Cron örneği (her gün 04:00):
 

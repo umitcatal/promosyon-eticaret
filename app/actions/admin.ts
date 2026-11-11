@@ -3,7 +3,15 @@
 import { refresh, updateTag } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { db, getSetting, setSetting } from "@/lib/db";
+import { parseImages } from "@/lib/format";
+import { isProductImageUrl } from "@/lib/image-urls";
+import { nextManualId } from "@/lib/manual-products";
 import { ORDER_STATUSES } from "@/lib/orders";
+import { deleteUnreferencedProductImages } from "@/lib/product-images";
+import {
+  parseProductImageInput,
+  parseVariantsPayload,
+} from "@/lib/product-input";
 import { syncCatalog } from "@/lib/sync";
 import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
@@ -78,10 +86,28 @@ export async function updateProductAction(
     return { error: "Geçersiz ürün" };
   }
 
+  const product = db
+    .prepare("SELECT id, source FROM products WHERE id = ?")
+    .get(productId) as { id: number; source: string } | undefined;
+  if (!product) {
+    return { error: "Ürün bulunamadı." };
+  }
+
   const isFeatured = formData.get("isFeatured") === "on" ? 1 : 0;
   const isHidden = formData.get("isHidden") === "on" ? 1 : 0;
   const metaTitle = parseMeta(formData.get("metaTitle"));
   const metaDescription = parseMeta(formData.get("metaDescription"));
+
+  if (product.source === "manual") {
+    return updateManualProduct({
+      productId,
+      formData,
+      isFeatured,
+      isHidden,
+      metaTitle,
+      metaDescription,
+    });
+  }
 
   const variants = db
     .prepare("SELECT id FROM variants WHERE product_id = ?")
@@ -118,6 +144,167 @@ export async function updateProductAction(
 
   updateTag("catalog");
   return { ok: true, message: "Ürün ve varyantlar güncellendi." };
+}
+
+async function updateManualProduct({
+  productId,
+  formData,
+  isFeatured,
+  isHidden,
+  metaTitle,
+  metaDescription,
+}: {
+  productId: number;
+  formData: FormData;
+  isFeatured: number;
+  isHidden: number;
+  metaTitle: string | null;
+  metaDescription: string | null;
+}): Promise<AdminActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return { error: "Ürün adı zorunludur." };
+
+  const code = String(formData.get("code") ?? "").trim();
+  if (!code) return { error: "Ürün kodu zorunludur." };
+
+  const description = String(formData.get("description") ?? "").trim() || null;
+  const tags = String(formData.get("tags") ?? "").trim() || null;
+
+  const categoryRaw = String(formData.get("categoryId") ?? "").trim();
+  const categoryId = categoryRaw === "" ? null : Number(categoryRaw);
+  if (categoryId !== null && (!Number.isInteger(categoryId) || categoryId <= 0)) {
+    return { error: "Geçersiz kategori." };
+  }
+  if (
+    categoryId !== null &&
+    !db.prepare("SELECT 1 AS found FROM categories WHERE id = ?").get(categoryId)
+  ) {
+    return { error: "Kategori bulunamadı." };
+  }
+
+  const imageResult = parseProductImageInput(formData.get("imageUrls"));
+  if (!imageResult.ok) return { error: imageResult.error };
+
+  const variantResult = parseVariantsPayload(formData.get("variants"));
+  if (!variantResult.ok) return { error: variantResult.error };
+  const variants = variantResult.value;
+
+  const existingRows = db
+    .prepare(
+      "SELECT id, images FROM variants WHERE product_id = ? AND source = 'manual' ORDER BY id"
+    )
+    .all(productId) as { id: number; images: string }[];
+  const existingIds = new Set(existingRows.map((row) => row.id));
+  for (const variant of variants) {
+    if (variant.id !== undefined && !existingIds.has(variant.id)) {
+      return { error: "Varyant bu ürüne ait değil." };
+    }
+  }
+
+  const codeOwner = db
+    .prepare("SELECT id FROM products WHERE code = ? AND id <> ?")
+    .get(code, productId);
+  if (codeOwner) {
+    return { error: `"${code}" kodu başka bir üründe kullanılıyor.` };
+  }
+
+  try {
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE products
+         SET name = ?, code = ?, description = ?, tags = ?, category_id = ?,
+             is_featured = ?, is_hidden = ?, meta_title = ?, meta_description = ?,
+             images = ?, updated_at = datetime('now')
+         WHERE id = ? AND source = 'manual'`
+      ).run(
+        name,
+        code,
+        description,
+        tags,
+        categoryId,
+        isFeatured,
+        isHidden,
+        metaTitle,
+        metaDescription,
+        JSON.stringify(imageResult.value),
+        productId
+      );
+
+      let nextId = nextManualId("variants");
+      const updateVariant = db.prepare(
+        `UPDATE variants
+         SET attr_name = ?, images = ?, price = ?, stock = ?, is_hidden = ?,
+             price_source = ?,
+             price_updated_at = CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END,
+             updated_at = datetime('now')
+         WHERE id = ? AND product_id = ? AND source = 'manual'`
+      );
+      const insertVariant = db.prepare(
+        `INSERT INTO variants
+           (id, product_id, attr_group, attr_name, images, price, net_price,
+            discount, stock, price_updated_at, price_source, is_hidden, active,
+            source, updated_at)
+         VALUES (?, ?, NULL, ?, ?, ?, NULL, NULL, ?,
+                 CASE WHEN ? IS NULL THEN NULL ELSE datetime('now') END,
+                 ?, ?, 1, 'manual', datetime('now'))`
+      );
+
+      const kept = new Set<number>();
+      for (const variant of variants) {
+        const priceSource = variant.price === null ? null : "manual";
+        if (variant.id !== undefined && existingIds.has(variant.id)) {
+          kept.add(variant.id);
+          updateVariant.run(
+            variant.name,
+            JSON.stringify(variant.images),
+            variant.price,
+            variant.stock,
+            variant.isHidden ? 1 : 0,
+            priceSource,
+            variant.price,
+            variant.id,
+            productId
+          );
+        } else {
+          insertVariant.run(
+            nextId++,
+            productId,
+            variant.name,
+            JSON.stringify(variant.images),
+            variant.price,
+            variant.stock,
+            variant.price,
+            priceSource,
+            variant.isHidden ? 1 : 0
+          );
+        }
+      }
+
+      const removeVariant = db.prepare(
+        "DELETE FROM variants WHERE id = ? AND product_id = ? AND source = 'manual'"
+      );
+      for (const row of existingRows) {
+        if (!kept.has(row.id)) removeVariant.run(row.id, productId);
+      }
+    }).immediate();
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+
+  const usedImages = new Set(variants.flatMap((variant) => variant.images));
+  const removedImages = existingRows
+    .flatMap((row) => parseImages(row.images))
+    .filter(
+      (url) => isProductImageUrl(url) && !usedImages.has(url)
+    );
+  await deleteUnreferencedProductImages(removedImages);
+
+  updateTag("catalog");
+  return {
+    ok: true,
+    message: "Ürün ve varyantlar güncellendi.",
+    nonce: crypto.randomUUID(),
+  };
 }
 
 export async function updateCategoryAction(

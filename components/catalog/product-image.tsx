@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { isOptimizableImageHost, isRemoteImage } from "@/lib/image-hosts";
 
 export function ProductImage({
   src,
@@ -57,7 +58,10 @@ export function ProductImage({
       priority={priority}
       sizes={sizes}
       src={src}
-      unoptimized={unoptimized}
+      unoptimized={
+        unoptimized ??
+        (isRemoteImage(src) && !isOptimizableImageHost(src))
+      }
     />
   );
 }

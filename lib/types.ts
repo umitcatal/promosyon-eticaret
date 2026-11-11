@@ -19,10 +19,12 @@ export type ProductRow = {
   description: string | null;
   tags: string | null;
   baski_fiyatlari: string | null;
+  images: string;
   category_id: number | null;
   is_featured: number;
   is_hidden: number;
   active: number;
+  source: string;
   updated_at: string;
   meta_title: string | null;
   meta_description: string | null;
@@ -42,6 +44,7 @@ export type VariantRow = {
   price_source: string | null;
   is_hidden: number;
   active: number;
+  source: string;
   updated_at: string;
 };
 

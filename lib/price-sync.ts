@@ -35,7 +35,9 @@ export async function syncPrices(): Promise<PriceSyncResult> {
 
   const updateByProductCode = db.prepare(`
     UPDATE variants SET price = ?, price_source = 'xml', price_updated_at = datetime('now')
-    WHERE product_id = (SELECT id FROM products WHERE code = ?)
+    WHERE product_id = (
+      SELECT id FROM products WHERE code = ? AND source = 'xml'
+    )
   `);
 
   let updated = 0;

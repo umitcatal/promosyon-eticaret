@@ -44,9 +44,13 @@ export const PRODUCT_LIST_COLUMNS = `
     WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS max_price,
   (SELECT COUNT(*) FROM variants v
     WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0) AS variant_count,
-  (SELECT v.images FROM variants v
-    WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
-    ORDER BY v.id LIMIT 1) AS first_images
+  CASE
+    WHEN p.images IS NOT NULL AND p.images <> '[]' THEN p.images
+    ELSE (SELECT v.images FROM variants v
+      WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
+        AND v.images <> '[]'
+      ORDER BY v.id LIMIT 1)
+  END AS first_images
 `;
 
 const SEARCH_PRODUCT_COLUMNS = `
@@ -55,9 +59,13 @@ const SEARCH_PRODUCT_COLUMNS = `
     WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS min_price,
   (SELECT MAX(v.price) FROM variants v
     WHERE v.product_id = p.id AND v.price IS NOT NULL AND v.active = 1 AND v.is_hidden = 0) AS max_price,
-  (SELECT v.images FROM variants v
-    WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
-    ORDER BY v.id LIMIT 1) AS first_images
+  CASE
+    WHEN p.images IS NOT NULL AND p.images <> '[]' THEN p.images
+    ELSE (SELECT v.images FROM variants v
+      WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
+        AND v.images <> '[]'
+      ORDER BY v.id LIMIT 1)
+  END AS first_images
 `;
 
 const PRODUCT_SEARCH_WHERE = `p.active = 1 AND p.is_hidden = 0 AND (
@@ -1005,22 +1013,29 @@ export async function getCategoryCardImage(
 
   if (categoryIds.length === 0) return null;
   const placeholders = categoryIds.map(() => "?").join(", ");
+
+  const productRow = db
+    .prepare(
+      `SELECT p.images FROM products p
+       WHERE p.active = 1 AND p.is_hidden = 0
+         AND p.category_id IN (${placeholders})
+         AND p.images IS NOT NULL AND p.images <> '[]'
+       ORDER BY p.is_featured DESC, p.id DESC LIMIT 1`
+    )
+    .get(...categoryIds) as { images: string } | undefined;
+  const productImage = firstImage(productRow?.images);
+  if (productImage) return productImage;
+
   const row = db
     .prepare(
       `SELECT v.images FROM variants v
        JOIN products p ON p.id = v.product_id
        WHERE p.active = 1 AND p.is_hidden = 0 AND v.active = 1 AND v.is_hidden = 0
+         AND v.images <> '[]'
          AND p.category_id IN (${placeholders})
        ORDER BY p.is_featured DESC, p.id DESC LIMIT 1`
     )
     .get(...categoryIds) as { images: string } | undefined;
 
-  if (!row) return null;
-  try {
-    const parsed = JSON.parse(row.images) as unknown;
-    if (Array.isArray(parsed) && typeof parsed[0] === "string") return parsed[0];
-  } catch {
-    return null;
-  }
-  return null;
+  return firstImage(row?.images);
 }

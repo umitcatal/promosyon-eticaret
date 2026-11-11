@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ProductEditForm } from "@/components/admin/product-edit-form";
 import { db } from "@/lib/db";
+import { descriptionToText, parseImages } from "@/lib/format";
+import { fetchAdminCategoryOptions } from "@/lib/queries";
 
 export const metadata = {
   title: "Ürün Düzenle",
@@ -11,6 +13,11 @@ type ProductRow = {
   id: number;
   code: string;
   name: string;
+  slug: string;
+  source: string;
+  description: string | null;
+  tags: string | null;
+  images: string;
   is_featured: number;
   is_hidden: number;
   active: number;
@@ -22,12 +29,14 @@ type ProductRow = {
 type VariantRow = {
   id: number;
   attr_name: string | null;
+  images: string;
   price: number | null;
   net_price: number | null;
   discount: number | null;
   stock: number | null;
   is_hidden: number;
   active: number;
+  source: string;
 };
 
 export default async function AdminProductEditPage({
@@ -44,10 +53,13 @@ export default async function AdminProductEditPage({
 
   const variants = db
     .prepare(
-      `SELECT id, attr_name, price, net_price, discount, stock, is_hidden, active
+      `SELECT id, attr_name, images, price, net_price, discount, stock,
+              is_hidden, active, source
        FROM variants WHERE product_id = ? ORDER BY id`
     )
     .all(productId) as VariantRow[];
+
+  const categories = fetchAdminCategoryOptions();
 
   const category = product.category_id
     ? (db
@@ -75,6 +87,15 @@ export default async function AdminProductEditPage({
         <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
           Kod: {product.code}
         </span>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+            product.source === "manual"
+              ? "bg-orange-50 text-orange-700"
+              : "bg-zinc-100 text-zinc-600"
+          }`}
+        >
+          {product.source === "manual" ? "Manuel" : "XML"}
+        </span>
         {category ? (
           <Link
             className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 transition hover:bg-orange-100"
@@ -87,18 +108,28 @@ export default async function AdminProductEditPage({
       </div>
 
       <ProductEditForm
+        categories={categories}
         product={{
           id: product.id,
           name: product.name,
           code: product.code,
+          slug: product.slug,
+          source: product.source,
+          description: product.description,
+          descriptionText: descriptionToText(product.description),
+          tags: product.tags,
+          category_id: product.category_id,
+          categoryName: category?.name ?? null,
           is_featured: product.is_featured,
           is_hidden: product.is_hidden,
           meta_title: product.meta_title,
           meta_description: product.meta_description,
+          images: parseImages(product.images),
         }}
         variants={variants.map((variant) => ({
           id: variant.id,
           name: variant.attr_name || product.name,
+          images: parseImages(variant.images),
           price: variant.price,
           netPrice: variant.net_price,
           discount: variant.discount,

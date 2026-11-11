@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { OPTIMIZABLE_IMAGE_HOSTS } from "./lib/image-hosts";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -14,20 +15,18 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
-  serverExternalPackages: ["better-sqlite3"],
+  serverExternalPackages: ["better-sqlite3", "sharp"],
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
     },
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "akdeniz.s3.amazonaws.com",
-        pathname: "/**",
-      },
-    ],
+    remotePatterns: OPTIMIZABLE_IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+      pathname: "/**",
+    })),
   },
 };
 

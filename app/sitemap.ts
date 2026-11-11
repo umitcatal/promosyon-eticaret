@@ -26,18 +26,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const products = db
     .prepare(
-      `SELECT p.slug, p.updated_at,
+      `SELECT p.slug, p.updated_at, p.images AS product_images,
               (SELECT v.images FROM variants v
                WHERE v.product_id = p.id AND v.active = 1 AND v.is_hidden = 0
+                 AND v.images <> '[]'
                ORDER BY v.id LIMIT 1) AS first_images
        FROM products p
        WHERE p.active = 1 AND p.is_hidden = 0`
     )
     .all() as {
-      slug: string;
-      updated_at: string;
-      first_images: string | null;
-    }[];
+    slug: string;
+    updated_at: string;
+    product_images: string;
+    first_images: string | null;
+  }[];
 
   const pages = db
     .prepare("SELECT slug, updated_at FROM pages WHERE active = 1")
@@ -75,7 +77,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: parseSqliteDate(product.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.6,
-        images: absoluteImages(firstImage(product.first_images)),
+        images: absoluteImages(
+          firstImage(product.product_images) ?? firstImage(product.first_images)
+        ),
       })),
     ...collections
       .filter((collection) => isSafeSlug(collection.slug))
