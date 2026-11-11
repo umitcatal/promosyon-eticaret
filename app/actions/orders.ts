@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { getCart, saveCart } from "@/lib/cart";
 import { db } from "@/lib/db";
+import { sendOrderQuoteEmail } from "@/lib/mail";
 
 const ORDER_COOLDOWN_SECONDS = 60;
 const HOURLY_ORDER_LIMIT = 5;
@@ -171,6 +173,15 @@ export async function createOrderAction(
   }).immediate();
 
   if ("error" in result) return { error: result.error };
+
+  const orderId = result.orderId;
+  after(async () => {
+    try {
+      await sendOrderQuoteEmail(orderId);
+    } catch (error) {
+      console.error("[mail] teklif maili gönderilemedi", error);
+    }
+  });
 
   await saveCart({});
   redirect(`/hesabim/siparisler?olustu=${result.orderId}`);

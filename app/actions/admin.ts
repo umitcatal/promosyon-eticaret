@@ -1,10 +1,17 @@
 "use server";
 
 import { refresh, updateTag } from "next/cache";
+import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { db, getSetting, setSetting } from "@/lib/db";
 import { parseImages } from "@/lib/format";
 import { isProductImageUrl } from "@/lib/image-urls";
+import {
+  MAIL_SETTINGS_KEY,
+  getMailSettings,
+  sendTestMail,
+  type MailSettings,
+} from "@/lib/mail";
 import { nextManualId } from "@/lib/manual-products";
 import { ORDER_STATUSES } from "@/lib/orders";
 import { deleteUnreferencedProductImages } from "@/lib/product-images";
@@ -646,5 +653,101 @@ export async function syncPricesAction(): Promise<AdminActionState> {
     };
   } catch (error) {
     return { error: (error as Error).message };
+  }
+}
+
+export async function saveMailSettingsAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const seen = new Set<string>();
+  const recipients: string[] = [];
+  for (const part of String(formData.get("recipients") ?? "").split(/[\n,;]+/)) {
+    const email = part.trim();
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      recipients.push(email);
+    }
+  }
+  const parsedRecipients = z.array(z.email()).max(20).safeParse(recipients);
+  if (!parsedRecipients.success) {
+    return {
+      error:
+        "Alıcı listesinde geçersiz e-posta adresi var veya 20 adres sınırı aşıldı.",
+    };
+  }
+
+  const host = String(formData.get("host") ?? "").trim();
+  const port = Number(String(formData.get("port") ?? "").trim());
+  const secure = formData.get("secure") === "on";
+  const user = String(formData.get("user") ?? "").trim();
+  const pass = String(formData.get("pass") ?? "").trim();
+  const fromName =
+    String(formData.get("fromName") ?? "").trim() || "Kurumsal Promo";
+  const parsedFromAddress = z
+    .email()
+    .safeParse(String(formData.get("fromAddress") ?? "").trim());
+
+  if (!host) return { error: "SMTP sunucu adresi gerekli." };
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    return { error: "Geçerli bir SMTP portu girin (1-65535)." };
+  }
+  if (!user) return { error: "SMTP kullanıcı adı gerekli." };
+  if (!parsedFromAddress.success) {
+    return { error: "Geçerli bir gönderici e-posta adresi girin." };
+  }
+
+  const effectivePass = pass || getMailSettings()?.pass || "";
+  if (!effectivePass) return { error: "SMTP şifresi gerekli." };
+
+  const settings: MailSettings = {
+    host,
+    port,
+    secure,
+    user,
+    pass: effectivePass,
+    fromName,
+    fromAddress: parsedFromAddress.data,
+    recipients: parsedRecipients.data,
+  };
+  setSetting(MAIL_SETTINGS_KEY, JSON.stringify(settings));
+  return { ok: true, message: "Mail ayarları kaydedildi." };
+}
+
+export async function sendTestMailAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const settings = getMailSettings();
+  if (!settings) return { error: "Önce mail ayarlarını kaydedin." };
+
+  const testTo = String(formData.get("testTo") ?? "").trim();
+  let targets = settings.recipients;
+  if (testTo) {
+    const parsed = z.email().safeParse(testTo);
+    if (!parsed.success) {
+      return { error: "Geçerli bir test e-posta adresi girin." };
+    }
+    targets = [parsed.data];
+  }
+  if (targets.length === 0) {
+    return {
+      error:
+        "Alıcı adresi yok. Bir test adresi yazın veya alıcı listesine adres ekleyin.",
+    };
+  }
+
+  try {
+    await sendTestMail(targets.join(", "));
+    return { ok: true, message: `Test maili gönderildi: ${targets.join(", ")}` };
+  } catch (error) {
+    return {
+      error: `Test maili gönderilemedi: ${(error as Error).message}`,
+    };
   }
 }

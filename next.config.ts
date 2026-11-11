@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
       fallback: [],
     };
   },
-  serverExternalPackages: ["better-sqlite3", "sharp"],
+  serverExternalPackages: ["better-sqlite3", "sharp", "nodemailer"],
   experimental: {
     serverActions: {
       bodySizeLimit: "8mb",
