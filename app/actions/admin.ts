@@ -3,6 +3,10 @@
 import { refresh, updateTag } from "next/cache";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
+import {
+  GOOGLE_TAG_SETTING_KEY,
+  parseGoogleTagId,
+} from "@/lib/analytics";
 import { db, getSetting, setSetting } from "@/lib/db";
 import { parseImages } from "@/lib/format";
 import { isProductImageUrl } from "@/lib/image-urls";
@@ -607,6 +611,32 @@ export async function saveVatRateAction(
   }
   setSetting(VAT_RATE_SETTING_KEY, String(rate));
   return { ok: true, message: `KDV oranı %${rate} olarak kaydedildi.` };
+}
+
+export async function saveGoogleTagAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const raw = String(formData.get("googleTagId") ?? "").trim();
+
+  if (!raw) {
+    setSetting(GOOGLE_TAG_SETTING_KEY, "");
+    updateTag("settings");
+    return { ok: true, message: "Google Analytics etiketi kaldırıldı." };
+  }
+
+  const tag = parseGoogleTagId(raw);
+  if (!tag) {
+    return {
+      error:
+        "Geçerli bir GTM (GTM-XXXXXXX) veya GA4 (G-XXXXXXXXXX) kimliği girin.",
+    };
+  }
+
+  setSetting(GOOGLE_TAG_SETTING_KEY, tag.id);
+  updateTag("settings");
+  return { ok: true, message: `${tag.id} kaydedildi.` };
 }
 
 export async function saveLogoAction(

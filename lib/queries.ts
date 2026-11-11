@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from "next/cache";
+import { getGoogleTagIdSetting, type GoogleTagId } from "./analytics";
 import { db, getSetting } from "./db";
 import { firstImage } from "./format";
 import {
@@ -373,6 +374,14 @@ export async function getSiteLogoUrl(): Promise<string | null> {
 
   const url = getSetting("logo_url");
   return url && url.trim() ? url.trim() : null;
+}
+
+export async function getGoogleTagId(): Promise<GoogleTagId | null> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  return getGoogleTagIdSetting();
 }
 
 export function getVatRate(): number {

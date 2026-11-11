@@ -1,11 +1,12 @@
 import { SyncPricesButton } from "@/components/admin/sync-buttons";
 import { LogoForm } from "@/components/admin/logo-form";
+import { GoogleTagForm } from "@/components/admin/google-tag-form";
 import { MailSettingsForm } from "@/components/admin/mail-settings-form";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { VatRateForm } from "@/components/admin/vat-rate-form";
 import { db } from "@/lib/db";
 import { getMailSettingsPublic } from "@/lib/mail";
-import { getSiteLogoUrl, getVatRate } from "@/lib/queries";
+import { getGoogleTagId, getSiteLogoUrl, getVatRate } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
@@ -16,6 +17,7 @@ export const metadata = {
 export default async function AdminSettingsPage() {
   const priceXmlUrl = getPriceXmlUrl() ?? "";
   const logoUrl = await getSiteLogoUrl();
+  const googleTag = await getGoogleTagId();
   const vatRate = getVatRate();
   const mailSettings = getMailSettingsPublic();
   const productXmlUrl =
@@ -44,6 +46,19 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="mt-4">
           <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">
+          Google Analytics / GTM
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Google Tag Manager veya Google Analytics 4 kimliğinizi girerek
+          sitenin <code>&lt;head&gt;</code> bölümüne izleme kodunu ekleyin.
+        </p>
+        <div className="mt-4">
+          <GoogleTagForm googleTagId={googleTag?.id ?? ""} />
         </div>
       </section>
 
