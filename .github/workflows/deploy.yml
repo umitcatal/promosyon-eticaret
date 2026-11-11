@@ -32,6 +32,9 @@ jobs:
             # gitignore'da olduğu için reset --hard bunlara dokunmaz.
             git fetch --prune origin main
             git reset --hard origin/main
-            npm install
+            # Eski/yarım kalmış node_modules, npm'in opsiyonel bağımlılıklarda
+            # "ENOENT ... oxide-wasm32-wasi" hatasına yol açıyor; temiz kurulum yap.
+            rm -rf node_modules
+            npm install --no-audit --no-fund
             npm run build
             pm2 restart kurumsalpromo
