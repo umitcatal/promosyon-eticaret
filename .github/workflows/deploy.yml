@@ -28,6 +28,6 @@ jobs:
             set -e
             cd /var/www/kurumsalpromo
             git pull --ff-only
-            npm ci
+            npm install
             npm run build
             pm2 restart kurumsalpromo
