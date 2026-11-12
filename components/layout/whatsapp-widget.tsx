@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { CheckCheck, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { buildWhatsAppChatUrl } from "@/lib/whatsapp";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 
 type ChatMessage = {
   id: string;
@@ -224,24 +225,27 @@ export function WhatsAppWidget({
         ) : null}
       </AnimatePresence>
 
-      <button
-        aria-expanded={open}
-        aria-label={
-          open ? "WhatsApp sohbetini kapat" : "WhatsApp destek hattını aç"
-        }
-        className="flex items-center gap-2.5 rounded-full bg-[#25d366] px-4 py-3 text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.75)] transition hover:bg-[#1fbe5a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128c7e]"
-        onClick={toggleOpen}
-        type="button"
-      >
-        {open ? (
-          <X aria-hidden="true" className="size-6" />
-        ) : (
-          <WhatsAppIcon className="size-6" />
-        )}
-        <span className="hidden text-sm font-semibold sm:block">
-          {open ? "Kapat" : "WhatsApp Destek"}
-        </span>
-      </button>
+      <div className="flex items-center gap-3">
+        <ScrollToTop />
+        <button
+          aria-expanded={open}
+          aria-label={
+            open ? "WhatsApp sohbetini kapat" : "WhatsApp destek hattını aç"
+          }
+          className="flex items-center gap-2.5 rounded-full bg-[#25d366] px-4 py-3 text-white shadow-[0_14px_36px_-10px_rgba(37,211,102,0.75)] transition hover:bg-[#1fbe5a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128c7e]"
+          onClick={toggleOpen}
+          type="button"
+        >
+          {open ? (
+            <X aria-hidden="true" className="size-6" />
+          ) : (
+            <WhatsAppIcon className="size-6" />
+          )}
+          <span className="hidden text-sm font-semibold lg:block">
+            {open ? "Kapat" : "WhatsApp Destek"}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
