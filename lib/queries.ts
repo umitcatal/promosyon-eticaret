@@ -34,6 +34,8 @@ import type {
   VariantRow,
 } from "./types";
 import { parseVatRate, VAT_RATE_SETTING_KEY } from "./vat";
+import type { WhatsAppSupport } from "./whatsapp";
+import { readWhatsAppSupport } from "./whatsapp-settings";
 
 export const PAGE_SIZE = 12;
 
@@ -382,6 +384,14 @@ export async function getGoogleTagId(): Promise<GoogleTagId | null> {
   cacheTag("settings");
 
   return getGoogleTagIdSetting();
+}
+
+export async function getWhatsAppSupport(): Promise<WhatsAppSupport> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  return readWhatsAppSupport();
 }
 
 export function getVatRate(): number {

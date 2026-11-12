@@ -26,6 +26,14 @@ import {
 import { syncCatalog } from "@/lib/sync";
 import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
+  formatWhatsAppNumber,
+  normalizeWhatsAppNumber,
+  WHATSAPP_ENABLED_SETTING_KEY,
+  WHATSAPP_NUMBER_SETTING_KEY,
+  WHATSAPP_TITLE_SETTING_KEY,
+  WHATSAPP_WELCOME_SETTING_KEY,
+} from "@/lib/whatsapp";
+import {
   deleteCategoryImage,
   deleteLogoImage,
   deleteSliderImage,
@@ -637,6 +645,67 @@ export async function saveGoogleTagAction(
   setSetting(GOOGLE_TAG_SETTING_KEY, tag.id);
   updateTag("settings");
   return { ok: true, message: `${tag.id} kaydedildi.` };
+}
+
+export async function saveWhatsAppSettingsAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const rawNumber = String(formData.get("whatsappNumber") ?? "").trim();
+  const title = String(formData.get("whatsappTitle") ?? "").trim();
+  const welcome = String(formData.get("whatsappWelcome") ?? "").trim();
+  const enabled = formData.get("whatsappEnabled") === "on";
+
+  const number = rawNumber ? normalizeWhatsAppNumber(rawNumber) : null;
+  if (rawNumber && !number) {
+    return {
+      error:
+        "Geçerli bir WhatsApp numarası girin. Ülke koduyla yazın; örnek: 905551234567 veya +90 555 123 45 67.",
+    };
+  }
+  if (enabled && !number) {
+    return {
+      error:
+        "WhatsApp destek hattını açmak için önce geçerli bir telefon numarası girin.",
+    };
+  }
+  if (title.length > 60) {
+    return { error: "Başlık en fazla 60 karakter olabilir." };
+  }
+  if (welcome.length > 1000) {
+    return { error: "Karşılama mesajı en fazla 1000 karakter olabilir." };
+  }
+
+  setSetting(WHATSAPP_NUMBER_SETTING_KEY, number ?? "");
+  setSetting(WHATSAPP_TITLE_SETTING_KEY, title);
+  setSetting(WHATSAPP_WELCOME_SETTING_KEY, welcome);
+  setSetting(WHATSAPP_ENABLED_SETTING_KEY, enabled ? "1" : "0");
+  updateTag("settings");
+
+  if (!enabled) {
+    return {
+      ok: true,
+      message:
+        "WhatsApp destek hattı kapatıldı; site üzerinde gösterilmiyor.",
+      nonce: crypto.randomUUID(),
+    };
+  }
+
+  if (!number) {
+    return {
+      ok: true,
+      message: "WhatsApp destek hattı kapatıldı; sitede gösterilmiyor.",
+      nonce: crypto.randomUUID(),
+    };
+  }
+
+  return {
+    ok: true,
+    message: `WhatsApp destek hattı ${formatWhatsAppNumber(number)} numarasına yönlendirildi.`,
+    nonce: crypto.randomUUID(),
+  };
 }
 
 export async function saveLogoAction(

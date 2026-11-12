@@ -432,3 +432,9 @@ body {
 .search-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* WhatsApp widget chat backdrop: subtle doodle pattern like WhatsApp Web. */
+.whatsapp-chat-bg {
+  background-color: #efeae2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.035' stroke-width='1'%3E%3Cpath d='M8 14h9M12.5 9.5v9M43 47h8M47 43v8M50 13h6M24 33h5M33 18h4M17 50h6M54 32h5'/%3E%3Ccircle cx='31' cy='52' r='2.5'/%3E%3Ccircle cx='51' cy='22' r='2'/%3E%3C/g%3E%3C/svg%3E");
+}

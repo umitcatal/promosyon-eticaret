@@ -4,10 +4,12 @@ import { GoogleTagForm } from "@/components/admin/google-tag-form";
 import { MailSettingsForm } from "@/components/admin/mail-settings-form";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { VatRateForm } from "@/components/admin/vat-rate-form";
+import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { db } from "@/lib/db";
 import { getMailSettingsPublic } from "@/lib/mail";
 import { getGoogleTagId, getSiteLogoUrl, getVatRate } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
+import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
 export const metadata = {
@@ -20,6 +22,7 @@ export default async function AdminSettingsPage() {
   const googleTag = await getGoogleTagId();
   const vatRate = getVatRate();
   const mailSettings = getMailSettingsPublic();
+  const whatsapp = readWhatsAppSupport();
   const productXmlUrl =
     process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
   const variantPrices = db
@@ -46,6 +49,20 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="mt-4">
           <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">
+          WhatsApp Destek Hattı
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Sitenin sağ alt köşesinde görünen WhatsApp destek butonunu ve sohbet
+          penceresini yönetin. Karşılama mesajı ile mesajların yönlendirileceği
+          WhatsApp numarasını buradan değiştirebilirsiniz.
+        </p>
+        <div className="mt-4">
+          <WhatsAppSettingsForm settings={whatsapp} />
         </div>
       </section>
 
