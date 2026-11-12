@@ -2,6 +2,7 @@ import { SyncPricesButton } from "@/components/admin/sync-buttons";
 import { LogoForm } from "@/components/admin/logo-form";
 import { GoogleTagForm } from "@/components/admin/google-tag-form";
 import { MailSettingsForm } from "@/components/admin/mail-settings-form";
+import { QuoteContactForm } from "@/components/admin/quote-contact-form";
 import { SettingsForm } from "@/components/admin/settings-form";
 import { VatRateForm } from "@/components/admin/vat-rate-form";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
@@ -9,6 +10,7 @@ import { db } from "@/lib/db";
 import { getMailSettingsPublic } from "@/lib/mail";
 import { getGoogleTagId, getSiteLogoUrl, getVatRate } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
+import { readQuoteContactSettings } from "@/lib/quote-contact";
 import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
@@ -23,6 +25,7 @@ export default async function AdminSettingsPage() {
   const vatRate = getVatRate();
   const mailSettings = getMailSettingsPublic();
   const whatsapp = readWhatsAppSupport();
+  const quoteContact = readQuoteContactSettings();
   const productXmlUrl =
     process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
   const variantPrices = db
@@ -63,6 +66,19 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="mt-4">
           <WhatsAppSettingsForm settings={whatsapp} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Teklif İletişimi</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Ürün detay sayfasındaki &quot;WhatsApp Teklif Al&quot;,
+          &quot;Telefon&quot; ve &quot;Mail Teklif İste&quot; butonlarının
+          yönlendirileceği iletişim kanallarını yönetin. WhatsApp butonu,
+          yukarıdaki WhatsApp destek numarasını kullanır.
+        </p>
+        <div className="mt-4">
+          <QuoteContactForm settings={quoteContact} />
         </div>
       </section>
 

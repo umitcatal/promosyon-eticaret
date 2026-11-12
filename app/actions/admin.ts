@@ -23,6 +23,11 @@ import {
   parseProductImageInput,
   parseVariantsPayload,
 } from "@/lib/product-input";
+import { normalizePhoneNumber } from "@/lib/quote";
+import {
+  QUOTE_EMAIL_SETTING_KEY,
+  QUOTE_PHONE_SETTING_KEY,
+} from "@/lib/quote-contact";
 import { syncCatalog } from "@/lib/sync";
 import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
@@ -704,6 +709,37 @@ export async function saveWhatsAppSettingsAction(
   return {
     ok: true,
     message: `WhatsApp destek hattı ${formatWhatsAppNumber(number)} numarasına yönlendirildi.`,
+    nonce: crypto.randomUUID(),
+  };
+}
+
+export async function saveQuoteContactAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+
+  const rawPhone = String(formData.get("quotePhone") ?? "").trim();
+  const rawEmail = String(formData.get("quoteEmail") ?? "").trim();
+
+  const phone = rawPhone ? normalizePhoneNumber(rawPhone) : null;
+  if (rawPhone && !phone) {
+    return {
+      error:
+        "Geçerli bir telefon numarası girin. Örnek: 0212 123 45 67 veya +90 555 123 45 67.",
+    };
+  }
+  if (rawEmail && !z.email().safeParse(rawEmail).success) {
+    return { error: "Geçerli bir e-posta adresi girin." };
+  }
+
+  setSetting(QUOTE_PHONE_SETTING_KEY, phone ?? "");
+  setSetting(QUOTE_EMAIL_SETTING_KEY, rawEmail);
+  updateTag("settings");
+
+  return {
+    ok: true,
+    message: "Teklif iletişim bilgileri kaydedildi.",
     nonce: crypto.randomUUID(),
   };
 }

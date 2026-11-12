@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal, useFormStatus } from "react-dom";
 import { addToCartAction } from "@/app/actions/cart";
 import { ProductImage } from "@/components/catalog/product-image";
+import { QuoteActions } from "@/components/catalog/quote-actions";
 import { primaryButtonClass } from "@/components/ui/styles";
 import { formatPrice } from "@/lib/format";
 import { clampQuantity, MAX_QUANTITY_DIGITS } from "@/lib/quantity";
+import type { QuoteChannels } from "@/lib/quote";
 
 export type ProductDetailVariant = {
   id: number;
@@ -171,12 +173,16 @@ function ImageLightbox({
 }
 
 export function ProductDetail({
+  categoryName,
   productName,
   productImages,
+  quoteChannels,
   variants,
 }: {
+  categoryName: string | null;
   productName: string;
   productImages: string[];
+  quoteChannels: QuoteChannels;
   variants: ProductDetailVariant[];
 }) {
   const firstAvailableId =
@@ -193,6 +199,9 @@ export function ProductDetail({
     () => variants.find((variant) => variant.id === selectedId) ?? variants[0],
     [selectedId, variants]
   );
+
+  const variantLabel =
+    selected && selected.name !== productName ? selected.name : null;
 
   const prices = useMemo(
     () =>
@@ -418,6 +427,18 @@ export function ProductDetail({
                 outOfStock={selected?.stock === 0}
               />
             </form>
+          </div>
+
+          <div className="mt-4">
+            <QuoteActions
+              channels={quoteChannels}
+              request={{
+                categoryName,
+                productName,
+                quantity,
+                variantName: variantLabel,
+              }}
+            />
           </div>
 
           <div className="mt-8 border-t border-line pt-6">

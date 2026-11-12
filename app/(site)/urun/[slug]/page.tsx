@@ -14,7 +14,7 @@ import { WhatsAppShareButton } from "@/components/catalog/whatsapp-share-button"
 import { FavoriteButton } from "@/components/favorites/favorite-button";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { DEFAULT_CAROUSEL_STYLE } from "@/lib/home-widgets";
-import { getProductBySlug } from "@/lib/queries";
+import { getProductBySlug, getQuoteContact, getWhatsAppSupport } from "@/lib/queries";
 import { RECENTLY_VIEWED_MAX_ITEMS } from "@/lib/recently-viewed";
 import {
   absoluteImages,
@@ -108,6 +108,10 @@ async function ProductContent({
 
   const { product, variants, category, parent } = data;
   const productImages = parseImages(product.images);
+  const [whatsapp, quoteContact] = await Promise.all([
+    getWhatsAppSupport(),
+    getQuoteContact(),
+  ]);
 
   const detailVariants: ProductDetailVariant[] = variants.map((variant) => ({
     id: variant.id,
@@ -161,8 +165,17 @@ async function ProductContent({
 
       <div className="mt-10">
         <ProductDetail
+          categoryName={
+            [parent?.name, category?.name].filter(Boolean).join(" > ") || null
+          }
           productImages={productImages}
           productName={product.name}
+          quoteChannels={{
+            email: quoteContact.email,
+            phone: quoteContact.phone,
+            whatsappNumber:
+              whatsapp.enabled && whatsapp.number ? whatsapp.number : null,
+          }}
           variants={detailVariants}
         />
       </div>

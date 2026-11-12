@@ -34,6 +34,8 @@ import type {
   VariantRow,
 } from "./types";
 import { parseVatRate, VAT_RATE_SETTING_KEY } from "./vat";
+import type { QuoteContact } from "./quote";
+import { readQuoteContact } from "./quote-contact";
 import type { WhatsAppSupport } from "./whatsapp";
 import { readWhatsAppSupport } from "./whatsapp-settings";
 
@@ -392,6 +394,14 @@ export async function getWhatsAppSupport(): Promise<WhatsAppSupport> {
   cacheTag("settings");
 
   return readWhatsAppSupport();
+}
+
+export async function getQuoteContact(): Promise<QuoteContact> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  return readQuoteContact();
 }
 
 export function getVatRate(): number {
