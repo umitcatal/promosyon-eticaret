@@ -6,6 +6,7 @@ import {
   MobileSearchTrigger,
 } from "@/components/search/search-trigger";
 import { CartLink } from "./cart-link";
+import { HeaderPhone, HeaderPhoneBand } from "./header-phone";
 import { ScrollHeaderFrame } from "./scroll-header-frame";
 import { SiteLogo } from "./site-logo";
 import { SiteNav } from "./site-nav";
@@ -51,20 +52,22 @@ export async function Header() {
         <div data-collapse>
           <div>
             <div className="border-b border-line/80">
-              <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted">
-                <span>Fiyatlar teklif bazlıdır</span>
+              <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink-muted sm:gap-6">
+                <span className="whitespace-nowrap">Fiyatlar teklif bazlıdır</span>
                 <span className="hidden sm:block">
                   Kurumsal baskı · Geniş ürün yelpazesi
                 </span>
+                <HeaderPhoneBand />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="site-header-bar mx-auto flex max-w-7xl items-center gap-5 px-4 py-4 sm:gap-8">
+        <div className="site-header-bar mx-auto flex max-w-7xl items-center gap-3 px-4 py-4 max-[380px]:gap-2 sm:gap-8">
           <SiteLogo />
           <DesktopSearchTrigger className="hidden flex-1 lg:block" />
-          <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <div className="ml-auto flex items-center gap-2.5 max-[380px]:gap-1.5 sm:gap-4">
+            <HeaderPhone />
             <Suspense fallback={<UserMenuFallback />}>
               <UserMenu />
             </Suspense>

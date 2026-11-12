@@ -330,6 +330,7 @@ function ProductCreateFields({
           onChange={setVariants}
           onUploaded={onUploaded}
           onUploadingChange={onUploadingChange}
+          reorderable
           variants={variants}
         />
       </div>

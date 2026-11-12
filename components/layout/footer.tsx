@@ -1,7 +1,16 @@
+import { Suspense } from "react";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { getCategoryTree } from "@/lib/queries";
+import { getCurrentUser } from "@/lib/auth";
+import {
+  getCategoryTree,
+  getMenuItemsCount,
+  getMenuNavItems,
+  getSiteContact,
+} from "@/lib/queries";
+import type { MenuNavItem } from "@/lib/types";
 
 async function getCopyrightYear(): Promise<number> {
   "use cache";
@@ -17,9 +26,61 @@ function ColumnLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+async function FooterAccountLinks() {
+  const user = await getCurrentUser();
+  const linkClass = "text-paper/65 transition-colors hover:text-brass-200";
+
+  return (
+    <>
+      {user ? (
+        <li>
+          <Link className={linkClass} href="/hesabim">
+            Hesabım
+          </Link>
+        </li>
+      ) : (
+        <>
+          <li>
+            <Link className={linkClass} href="/giris">
+              Giriş Yap
+            </Link>
+          </li>
+          <li>
+            <Link className={linkClass} href="/kayit">
+              Üye Ol
+            </Link>
+          </li>
+        </>
+      )}
+      <li>
+        <Link className={linkClass} href="/sepet">
+          Sepetim
+        </Link>
+      </li>
+    </>
+  );
+}
+
 export async function Footer() {
-  const tree = await getCategoryTree();
-  const year = await getCopyrightYear();
+  const [tree, year, contact, menuItems, menuCount] = await Promise.all([
+    getCategoryTree(),
+    getCopyrightYear(),
+    getSiteContact(),
+    getMenuNavItems(),
+    getMenuItemsCount(),
+  ]);
+  const navItems: MenuNavItem[] =
+    menuCount > 0
+      ? menuItems
+      : [
+          {
+            id: -1,
+            label: "Ürünler",
+            type: "categories",
+            href: "/urunler",
+            open_in_new_tab: false,
+          },
+        ];
 
   return (
     <footer className="mt-24 bg-ink text-paper/70">
@@ -50,55 +111,75 @@ export async function Footer() {
           </div>
 
           <div>
-            <ColumnLabel>Hesap</ColumnLabel>
+            <ColumnLabel>Menü</ColumnLabel>
             <ul className="mt-5 space-y-2.5 text-sm">
-              <li>
-                <Link
-                  className="text-paper/65 transition-colors hover:text-brass-200"
-                  href="/giris"
-                >
-                  Giriş Yap
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="text-paper/65 transition-colors hover:text-brass-200"
-                  href="/kayit"
-                >
-                  Üye Ol
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="text-paper/65 transition-colors hover:text-brass-200"
-                  href="/hesabim"
-                >
-                  Hesabım
-                </Link>
-              </li>
-              <li>
-                <Link
-                  className="text-paper/65 transition-colors hover:text-brass-200"
-                  href="/sepet"
-                >
-                  Sepetim
-                </Link>
-              </li>
+              {navItems.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    className="text-paper/65 transition-colors hover:text-brass-200"
+                    href={item.href}
+                    rel={item.open_in_new_tab ? "noopener noreferrer" : undefined}
+                    target={item.open_in_new_tab ? "_blank" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+              <Suspense fallback={null}>
+                <FooterAccountLinks />
+              </Suspense>
             </ul>
           </div>
 
           <div className="lg:pl-8">
-            <ColumnLabel>Teklif</ColumnLabel>
-            <p className="mt-5 font-display text-xl leading-snug font-semibold text-paper">
-              Liste fiyatımız yok; size özel fiyat veriyoruz.
-            </p>
-            <Link
-              className="mt-6 inline-flex items-center gap-3 rounded-sm bg-paper px-5 py-2.5 text-sm font-semibold text-ink transition-colors hover:bg-brass-200"
-              href="/urunler"
-            >
-              Ürünleri görüntüleyin
-              <span aria-hidden="true">→</span>
-            </Link>
+            <ColumnLabel>İletişim</ColumnLabel>
+            <ul className="mt-5 space-y-4 text-sm">
+              {contact.phone && contact.phoneDisplay ? (
+                <li>
+                  <a
+                    aria-label={`Telefon: ${contact.phoneDisplay}`}
+                    className="group flex items-start gap-3"
+                    href={`tel:+${contact.phone}`}
+                  >
+                    <Phone
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-brass-300"
+                    />
+                    <span className="font-display text-lg font-semibold text-paper transition-colors group-hover:text-brass-200">
+                      {contact.phoneDisplay}
+                    </span>
+                  </a>
+                </li>
+              ) : null}
+              {contact.address ? (
+                <li className="flex items-start gap-3">
+                  <MapPin
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-brass-300"
+                  />
+                  <span className="leading-6 whitespace-pre-line text-paper/65">
+                    {contact.address}
+                  </span>
+                </li>
+              ) : null}
+              {contact.email ? (
+                <li>
+                  <a
+                    aria-label={`E-posta: ${contact.email}`}
+                    className="group flex items-start gap-3"
+                    href={`mailto:${contact.email}`}
+                  >
+                    <Mail
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-brass-300"
+                    />
+                    <span className="break-all text-paper/65 transition-colors group-hover:text-brass-200">
+                      {contact.email}
+                    </span>
+                  </a>
+                </li>
+              ) : null}
+            </ul>
           </div>
         </div>
 

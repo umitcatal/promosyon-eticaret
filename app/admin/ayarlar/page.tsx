@@ -70,9 +70,10 @@ export default async function AdminSettingsPage() {
       </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <h3 className="text-base font-bold text-zinc-900">Teklif İletişimi</h3>
+        <h3 className="text-base font-bold text-zinc-900">İletişim Bilgileri</h3>
         <p className="mt-1 text-sm leading-6 text-zinc-500">
-          Ürün detay sayfasındaki &quot;WhatsApp Teklif Al&quot;,
+          Header&apos;daki telefon butonu, footer&apos;daki İletişim bölümü ve
+          ürün detay sayfasındaki &quot;WhatsApp Teklif Al&quot;,
           &quot;Telefon&quot; ve &quot;Mail Teklif İste&quot; butonlarının
           yönlendirileceği iletişim kanallarını yönetin. WhatsApp butonu,
           yukarıdaki WhatsApp destek numarasını kullanır.

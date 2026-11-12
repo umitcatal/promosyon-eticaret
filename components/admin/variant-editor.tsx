@@ -5,8 +5,11 @@ import {
   useState,
   type ChangeEvent,
   type Dispatch,
+  type DragEvent,
   type SetStateAction,
 } from "react";
+import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
+import { motion } from "motion/react";
 import { uploadProductImageAction } from "@/app/actions/products";
 import { inputClass, labelClass } from "@/components/ui/styles";
 import {
@@ -57,6 +60,7 @@ export function VariantEditor({
   onUploaded,
   onUploadingChange,
   showHidden = false,
+  reorderable = false,
   disabled = false,
 }: {
   variants: VariantDraft[];
@@ -64,11 +68,18 @@ export function VariantEditor({
   onUploaded?: (url: string) => void;
   onUploadingChange?: (pending: number) => void;
   showHidden?: boolean;
+  reorderable?: boolean;
   disabled?: boolean;
 }) {
   const [uploading, setUploading] = useState(0);
   const [busyKeys, setBusyKeys] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    key: string;
+    position: "before" | "after";
+  } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
     onUploadingChange?.(uploading);
@@ -102,6 +113,75 @@ export function VariantEditor({
         ? previous
         : previous.filter((variant) => variant.key !== key)
     );
+  }
+
+  function moveVariant(key: string, direction: -1 | 1) {
+    const from = variants.findIndex((variant) => variant.key === key);
+    const to = from + direction;
+    if (from === -1 || to < 0 || to >= variants.length) return;
+    onChange((previous) => {
+      const start = previous.findIndex((variant) => variant.key === key);
+      const end = start + direction;
+      if (start === -1 || end < 0 || end >= previous.length) return previous;
+      const next = [...previous];
+      const [moved] = next.splice(start, 1);
+      next.splice(end, 0, moved);
+      return next;
+    });
+    setAnnouncement(`Varyant ${to + 1}. sıraya taşındı.`);
+  }
+
+  function handleDragStart(
+    event: DragEvent<HTMLButtonElement>,
+    key: string
+  ) {
+    if (disabled) return;
+    setDraggingKey(key);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", key);
+    const card = event.currentTarget.closest("[data-variant-card]");
+    if (card instanceof HTMLElement) {
+      event.dataTransfer.setDragImage(card, 24, 24);
+    }
+  }
+
+  function handleDragEnd() {
+    setDraggingKey(null);
+    setDropTarget(null);
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>, key: string) {
+    if (disabled || !draggingKey || draggingKey === key) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    const rect = event.currentTarget.getBoundingClientRect();
+    const position =
+      event.clientY - rect.top > rect.height / 2 ? "after" : "before";
+    setDropTarget((previous) =>
+      previous?.key === key && previous.position === position
+        ? previous
+        : { key, position }
+    );
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>, key: string) {
+    event.preventDefault();
+    const fromKey = draggingKey;
+    const position = dropTarget?.key === key ? dropTarget.position : "before";
+    setDraggingKey(null);
+    setDropTarget(null);
+    if (disabled || !fromKey || fromKey === key) return;
+    onChange((previous) => {
+      const start = previous.findIndex((variant) => variant.key === fromKey);
+      if (start === -1) return previous;
+      const next = [...previous];
+      const [moved] = next.splice(start, 1);
+      const targetIndex = next.findIndex((variant) => variant.key === key);
+      if (targetIndex === -1) return previous;
+      next.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, moved);
+      return next;
+    });
+    setAnnouncement("Varyant sırası güncellendi.");
   }
 
   function removeImage(key: string, url: string) {
@@ -157,20 +237,97 @@ export function VariantEditor({
   const uploadsDisabled =
     disabled || uploading > 0;
 
+  const canReorder = reorderable && variants.length > 1;
+
   return (
     <div className="space-y-4">
+      {reorderable ? (
+        <>
+          <p aria-live="polite" className="sr-only">
+            {announcement}
+          </p>
+          {canReorder ? (
+            <p className="text-xs text-zinc-500">
+              Varyantları sürükleyerek ya da ok düğmeleriyle yeniden
+              sıralayabilirsiniz.
+            </p>
+          ) : null}
+        </>
+      ) : null}
       {variants.map((variant, index) => {
         const busy = busyKeys.includes(variant.key);
         const images = draftImages(variant);
         const inputId = `variant-upload-${variant.key}`;
+        const isDragging = draggingKey === variant.key;
+        const dropPosition =
+          dropTarget?.key === variant.key ? dropTarget.position : null;
 
         return (
-          <div
-            className="rounded-2xl border border-zinc-200 bg-white p-4"
+          <motion.div
+            className={`relative rounded-2xl border bg-white p-4 transition-colors ${
+              isDragging
+                ? "border-orange-300 opacity-60 ring-2 ring-orange-200"
+                : dropPosition
+                  ? "border-orange-200"
+                  : "border-zinc-200"
+            }`}
+            data-variant-card
             key={variant.key}
+            layout={reorderable ? "position" : false}
+            onDragOver={
+              reorderable
+                ? (event) => handleDragOver(event, variant.key)
+                : undefined
+            }
+            onDrop={
+              reorderable ? (event) => handleDrop(event, variant.key) : undefined
+            }
+            transition={{ type: "spring", stiffness: 700, damping: 44 }}
           >
+            {dropPosition === "before" ? (
+              <span className="pointer-events-none absolute inset-x-3 -top-2 h-1 rounded-full bg-orange-500" />
+            ) : null}
+            {dropPosition === "after" ? (
+              <span className="pointer-events-none absolute inset-x-3 -bottom-2 h-1 rounded-full bg-orange-500" />
+            ) : null}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
+                {canReorder ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      aria-label="Sürükleyerek sırala"
+                      className="flex h-7 w-6 cursor-grab items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={disabled}
+                      draggable={!disabled}
+                      onDragEnd={handleDragEnd}
+                      onDragStart={(event) => handleDragStart(event, variant.key)}
+                      title="Sürükleyerek sırala"
+                      type="button"
+                    >
+                      <GripVertical size={16} />
+                    </button>
+                    <div className="flex flex-col overflow-hidden rounded-md border border-zinc-200">
+                      <button
+                        aria-label="Varyantı yukarı taşı"
+                        className="flex h-4 w-6 items-center justify-center text-zinc-500 transition hover:bg-zinc-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                        disabled={disabled || index === 0}
+                        onClick={() => moveVariant(variant.key, -1)}
+                        type="button"
+                      >
+                        <ChevronUp size={13} />
+                      </button>
+                      <button
+                        aria-label="Varyantı aşağı taşı"
+                        className="flex h-4 w-6 items-center justify-center border-t border-zinc-200 text-zinc-500 transition hover:bg-zinc-100 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+                        disabled={disabled || index === variants.length - 1}
+                        onClick={() => moveVariant(variant.key, 1)}
+                        type="button"
+                      >
+                        <ChevronDown size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
                 <p className="text-sm font-semibold text-zinc-800">
                   Varyant {index + 1}
                 </p>
@@ -365,7 +522,7 @@ export function VariantEditor({
                 })}
               </ul>
             ) : null}
-          </div>
+          </motion.div>
         );
       })}
 

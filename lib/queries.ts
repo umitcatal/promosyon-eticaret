@@ -35,7 +35,7 @@ import type {
 } from "./types";
 import { parseVatRate, VAT_RATE_SETTING_KEY } from "./vat";
 import type { QuoteContact } from "./quote";
-import { readQuoteContact } from "./quote-contact";
+import { readQuoteContact, readSiteContact, type SiteContact } from "./quote-contact";
 import type { WhatsAppSupport } from "./whatsapp";
 import { readWhatsAppSupport } from "./whatsapp-settings";
 
@@ -402,6 +402,14 @@ export async function getQuoteContact(): Promise<QuoteContact> {
   cacheTag("settings");
 
   return readQuoteContact();
+}
+
+export async function getSiteContact(): Promise<SiteContact> {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  return readSiteContact();
 }
 
 export function getVatRate(): number {

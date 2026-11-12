@@ -9,7 +9,7 @@ export function FavoritesLink() {
   return (
     <Link
       aria-label="Favorilerim"
-      className="relative flex size-9 items-center justify-center rounded-sm border border-line text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700"
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-sm border border-line text-ink-muted transition-colors hover:border-brand-600 hover:text-brand-700"
       href="/hesabim/favoriler"
     >
       <svg

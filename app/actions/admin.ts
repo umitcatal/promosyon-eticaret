@@ -25,6 +25,7 @@ import {
 } from "@/lib/product-input";
 import { normalizePhoneNumber } from "@/lib/quote";
 import {
+  CONTACT_ADDRESS_SETTING_KEY,
   QUOTE_EMAIL_SETTING_KEY,
   QUOTE_PHONE_SETTING_KEY,
 } from "@/lib/quote-contact";
@@ -721,6 +722,7 @@ export async function saveQuoteContactAction(
 
   const rawPhone = String(formData.get("quotePhone") ?? "").trim();
   const rawEmail = String(formData.get("quoteEmail") ?? "").trim();
+  const rawAddress = String(formData.get("contactAddress") ?? "").trim();
 
   const phone = rawPhone ? normalizePhoneNumber(rawPhone) : null;
   if (rawPhone && !phone) {
@@ -732,14 +734,18 @@ export async function saveQuoteContactAction(
   if (rawEmail && !z.email().safeParse(rawEmail).success) {
     return { error: "Geçerli bir e-posta adresi girin." };
   }
+  if (rawAddress.length > 500) {
+    return { error: "Açık adres en fazla 500 karakter olabilir." };
+  }
 
   setSetting(QUOTE_PHONE_SETTING_KEY, phone ?? "");
   setSetting(QUOTE_EMAIL_SETTING_KEY, rawEmail);
+  setSetting(CONTACT_ADDRESS_SETTING_KEY, rawAddress);
   updateTag("settings");
 
   return {
     ok: true,
-    message: "Teklif iletişim bilgileri kaydedildi.",
+    message: "İletişim bilgileri kaydedildi.",
     nonce: crypto.randomUUID(),
   };
 }

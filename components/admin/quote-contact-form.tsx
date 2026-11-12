@@ -26,7 +26,7 @@ export function QuoteContactForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="quotePhone">
-            Teklif Telefonu
+            Telefon
           </label>
           <input
             autoComplete="off"
@@ -39,7 +39,8 @@ export function QuoteContactForm({
             type="tel"
           />
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Ürün detayındaki Telefon butonu bu numarayı arar; buton üzerinde{" "}
+            Header&apos;daki arama butonu, footer&apos;daki İletişim bölümü ve
+            ürün detayındaki Telefon butonu bu numarayı arar; ürün butonunda{" "}
             {QUOTE_PHONE_HOURS} çalışma saatleri görünür. Boş bırakılırsa
             WhatsApp destek numarası kullanılır.
           </p>
@@ -47,7 +48,7 @@ export function QuoteContactForm({
 
         <div>
           <label className={labelClass} htmlFor="quoteEmail">
-            Teklif E-postası
+            E-posta
           </label>
           <input
             autoComplete="off"
@@ -59,11 +60,30 @@ export function QuoteContactForm({
             type="email"
           />
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Mail Teklif İste butonu, ürün ve miktar bilgileri dolu bir e-posta
-            taslağını bu adresle açar. Boş bırakılırsa sipariş
-            bildirimlerindeki ilk alıcı adresi kullanılır.
+            Footer&apos;daki İletişim bölümünde gösterilir; Mail Teklif İste
+            butonu, ürün ve miktar bilgileri dolu bir e-posta taslağını bu
+            adresle açar. Boş bırakılırsa sipariş bildirimlerindeki ilk alıcı
+            adresi kullanılır.
           </p>
         </div>
+      </div>
+
+      <div>
+        <label className={labelClass} htmlFor="contactAddress">
+          Açık Adres
+        </label>
+        <textarea
+          className={inputClass}
+          defaultValue={settings.address}
+          id="contactAddress"
+          name="contactAddress"
+          placeholder="Örnek Mah. Örnek Cad. No: 12 Kat: 3&#10;Şişli / İstanbul"
+          rows={3}
+        />
+        <p className="mt-1 text-xs leading-5 text-zinc-500">
+          Footer&apos;daki İletişim bölümünde gösterilir. Boş bırakılırsa
+          adres satırı gizlenir.
+        </p>
       </div>
 
       {state.message ? (

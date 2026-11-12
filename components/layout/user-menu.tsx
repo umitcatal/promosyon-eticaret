@@ -8,15 +8,15 @@ export async function UserMenu() {
 
   if (!user) {
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-4">
         <Link
-          className="border-b border-transparent pb-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
+          className="shrink-0 border-b border-transparent pb-0.5 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
           href="/giris"
         >
           Giriş
         </Link>
         <Link
-          className="rounded-sm bg-brand-600 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.16em] text-paper transition-colors hover:bg-brand-700"
+          className="shrink-0 rounded-sm bg-brand-600 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.16em] whitespace-nowrap text-paper transition-colors hover:bg-brand-700 sm:px-4"
           href="/kayit"
         >
           Teklif Al
