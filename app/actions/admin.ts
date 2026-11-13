@@ -8,6 +8,9 @@ import {
   parseGoogleTagId,
 } from "@/lib/analytics";
 import { db, getSetting, setSetting } from "@/lib/db";
+import { CATALOG_SETTING_KEY, isCatalogExternalUrl, type CatalogSettings } from "@/lib/catalog";
+import { readCatalogSettings } from "@/lib/catalog-settings";
+import { CatalogUploadError, deleteCatalogFile, finishCatalogUpload } from "@/lib/catalog-uploads";
 import { parseImages } from "@/lib/format";
 import { isProductImageUrl } from "@/lib/image-urls";
 import {
@@ -748,6 +751,48 @@ export async function saveQuoteContactAction(
     message: "İletişim bilgileri kaydedildi.",
     nonce: crypto.randomUUID(),
   };
+}
+
+export async function saveCatalogSettingsAction(
+  formData: FormData
+): Promise<AdminActionState & { settings?: CatalogSettings }> {
+  const user = await requireAdmin();
+  const current = readCatalogSettings();
+  const label = String(formData.get("label") ?? "").trim();
+  const source = String(formData.get("source") ?? "");
+  const url = String(formData.get("url") ?? "").trim();
+  const enabled = formData.get("enabled") === "on";
+  const uploadId = String(formData.get("uploadId") ?? "");
+
+  if (!label || label.length > 80) return { error: "Katalog metni 1–80 karakter olmalıdır." };
+  if (source !== "url" && source !== "file") return { error: "Geçerli bir katalog kaynağı seçin." };
+  if (source === "url" && ((url && !isCatalogExternalUrl(url)) || (enabled && !url))) {
+    return { error: "http:// veya https:// ile başlayan geçerli bir katalog adresi girin." };
+  }
+  if (enabled && source === "file" && !uploadId && !current.fileUrl) {
+    return { error: "Önce bir PDF katalog yükleyin." };
+  }
+
+  let file = { fileUrl: current.fileUrl, fileName: current.fileName };
+  if (source === "file" && uploadId) {
+    try {
+      file = await finishCatalogUpload(uploadId, user.id);
+    } catch (error) {
+      if (error instanceof CatalogUploadError) return { error: error.message };
+      console.error("Katalog kaydedilemedi", error);
+      return { error: "PDF kaydedilemedi. Lütfen yeniden yükleyin." };
+    }
+  }
+  const settings: CatalogSettings = {
+    enabled, label, source, url, ...file,
+    openInNewTab: formData.get("openInNewTab") === "on",
+  };
+  setSetting(CATALOG_SETTING_KEY, JSON.stringify(settings));
+  updateTag("settings");
+  if (current.fileUrl && current.fileUrl !== settings.fileUrl) {
+    await deleteCatalogFile(current.fileUrl);
+  }
+  return { ok: true, message: "Katalog ayarları kaydedildi.", settings };
 }
 
 export async function saveLogoAction(

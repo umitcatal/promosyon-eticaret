@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 import { getGoogleTagIdSetting, type GoogleTagId } from "./analytics";
 import { db, getSetting } from "./db";
+import { readCatalogSettings } from "./catalog-settings";
 import { firstImage } from "./format";
 import {
   clampItemLimit,
@@ -369,6 +370,14 @@ export async function getMenuItemsCount(): Promise<number> {
   };
 
   return row.total;
+}
+
+export async function getHeaderCatalog() {
+  "use cache";
+  cacheLife("hours");
+  cacheTag("settings");
+
+  return readCatalogSettings();
 }
 
 export async function getSiteLogoUrl(): Promise<string | null> {

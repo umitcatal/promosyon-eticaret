@@ -1,5 +1,7 @@
 import { SyncPricesButton } from "@/components/admin/sync-buttons";
 import { LogoForm } from "@/components/admin/logo-form";
+import { CatalogForm } from "@/components/admin/catalog-form";
+import { readCatalogSettings } from "@/lib/catalog-settings";
 import { GoogleTagForm } from "@/components/admin/google-tag-form";
 import { MailSettingsForm } from "@/components/admin/mail-settings-form";
 import { QuoteContactForm } from "@/components/admin/quote-contact-form";
@@ -26,6 +28,7 @@ export default async function AdminSettingsPage() {
   const mailSettings = getMailSettingsPublic();
   const whatsapp = readWhatsAppSupport();
   const quoteContact = readQuoteContactSettings();
+  const catalog = readCatalogSettings();
   const productXmlUrl =
     process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
   const variantPrices = db
@@ -52,6 +55,17 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="mt-4">
           <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Üst Bar Katalog</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Header’ın en üst barında ortalanan katalog bağlantısını yönetin.
+          Harici bir adres kullanabilir veya 150 MB’a kadar PDF yükleyebilirsiniz.
+        </p>
+        <div className="mt-4">
+          <CatalogForm settings={catalog} />
         </div>
       </section>
 
