@@ -13,7 +13,7 @@ export async function SiteLogo({ href = "/", tone = "light" }: SiteLogoProps) {
   const content = logoUrl ? (
     <Image
       alt="Site logosu"
-      className="h-9 w-auto"
+      className="h-10 w-auto p-1 bg-white rounded-sm"
       height={64}
       src={logoUrl}
       width={300}
