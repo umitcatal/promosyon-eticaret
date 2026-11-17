@@ -105,7 +105,7 @@ async function SliderWidget() {
   const slides = await getSliderItems();
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:pt-6">
+    <section className="mx-auto w-full max-w-7xl px-4 pt-2">
       {slides.length > 0 ? (
         <Slider slides={slides} />
       ) : (
