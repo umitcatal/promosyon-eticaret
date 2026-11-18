@@ -2,10 +2,15 @@ import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { db } from "@/lib/db";
 import { firstImage, parseSqliteDate } from "@/lib/format";
-import { SITE_BASE, absoluteImages, cleanPath, isSafeSlug } from "@/lib/seo";
+import { absoluteImages, cleanPath, isSafeSlug } from "@/lib/seo";
+import { getRequestSiteId } from "@/lib/site-request";
+import { getSiteBaseUrl } from "@/lib/sites";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
+
+  const siteId = await getRequestSiteId();
+  const baseUrl = getSiteBaseUrl(siteId);
 
   // categories has no updated_at, so lastmod rolls up from the products the
   // page actually lists (own category plus direct children).
@@ -42,28 +47,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }[];
 
   const pages = db
-    .prepare("SELECT slug, updated_at FROM pages WHERE active = 1")
-    .all() as { slug: string; updated_at: string }[];
+    .prepare(
+      "SELECT slug, updated_at FROM pages WHERE active = 1 AND site_id = ?"
+    )
+    .all(siteId) as { slug: string; updated_at: string }[];
 
   const collections = db
-    .prepare("SELECT slug, updated_at FROM collections WHERE active = 1")
-    .all() as { slug: string; updated_at: string }[];
+    .prepare(
+      "SELECT slug, updated_at FROM collections WHERE active = 1 AND site_id = ?"
+    )
+    .all(siteId) as { slug: string; updated_at: string }[];
 
   return [
     {
-      url: `${SITE_BASE}/`,
+      url: `${baseUrl}/`,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: `${SITE_BASE}/urunler`,
+      url: `${baseUrl}/urunler`,
       changeFrequency: "daily",
       priority: 0.9,
     },
     ...categories
       .filter((category) => isSafeSlug(category.slug))
       .map((category) => ({
-        url: `${SITE_BASE}/kategori/${category.slug}`,
+        url: `${baseUrl}/kategori/${category.slug}`,
         lastModified: category.lastmod
           ? parseSqliteDate(category.lastmod)
           : undefined,
@@ -73,18 +82,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...products
       .filter((product) => isSafeSlug(product.slug))
       .map((product) => ({
-        url: `${SITE_BASE}/urun/${product.slug}`,
+        url: `${baseUrl}/urun/${product.slug}`,
         lastModified: parseSqliteDate(product.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.6,
         images: absoluteImages(
+          baseUrl,
           firstImage(product.product_images) ?? firstImage(product.first_images)
         ),
       })),
     ...collections
       .filter((collection) => isSafeSlug(collection.slug))
       .map((collection) => ({
-        url: `${SITE_BASE}/koleksiyon/${collection.slug}`,
+        url: `${baseUrl}/koleksiyon/${collection.slug}`,
         lastModified: parseSqliteDate(collection.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.6,
@@ -92,7 +102,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...pages
       .filter((page) => isSafeSlug(page.slug))
       .map((page) => ({
-        url: `${SITE_BASE}${cleanPath(page.slug)}`,
+        url: `${baseUrl}${cleanPath(page.slug)}`,
         lastModified: parseSqliteDate(page.updated_at),
         changeFrequency: "monthly" as const,
         priority: 0.5,

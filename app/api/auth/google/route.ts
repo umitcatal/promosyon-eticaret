@@ -1,14 +1,18 @@
 import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
-import { SITE_BASE } from "@/lib/seo";
+import { getRequestSiteId } from "@/lib/site-request";
+import { getSiteBaseUrl } from "@/lib/sites";
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    return Response.redirect(new URL("/giris?error=google", redirectUri ?? SITE_BASE));
+  const siteId = await getRequestSiteId();
+  const baseUrl = getSiteBaseUrl(siteId);
+  const redirectUri = `${baseUrl}/api/auth/callback/google`;
+
+  if (!clientId || !clientSecret) {
+    return Response.redirect(new URL("/giris?error=google", baseUrl));
   }
 
   const state = randomBytes(16).toString("base64url");
@@ -28,6 +32,7 @@ export async function GET(request: Request) {
   };
   cookieStore.set("google_oauth_state", state, cookieOptions);
   cookieStore.set("google_oauth_verifier", codeVerifier, cookieOptions);
+  cookieStore.set("google_oauth_site", String(siteId), cookieOptions);
   cookieStore.set(
     "google_oauth_next",
     requestUrl.searchParams.get("next") ?? "/",

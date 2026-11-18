@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ["better-sqlite3", "sharp", "nodemailer"],
   experimental: {
+    globalNotFound: true,
     serverActions: {
       bodySizeLimit: "8mb",
     },

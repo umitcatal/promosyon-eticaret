@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { isAssetReferenced } from "./asset-refs";
 import {
   PRODUCT_IMAGE_PREFIX,
   isProductImageUrl,
@@ -103,6 +104,7 @@ async function deleteImage(
   bucket: UploadBucket
 ): Promise<void> {
   if (!url?.startsWith(bucket.prefix)) return;
+  if (isAssetReferenced(url)) return;
 
   const file = path.basename(url);
   if (!file) return;

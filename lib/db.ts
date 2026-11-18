@@ -7,6 +7,8 @@ import {
   HOME_WIDGET_META,
 } from "./home-widgets";
 import { foldTr } from "./search-fold";
+import { getSiteIds } from "./sites";
+import { runMigrations } from "./db-migrations";
 
 const dbPath =
   process.env.DB_PATH ?? path.join(process.cwd(), "data", "promosyon.db");
@@ -289,6 +291,8 @@ db.exec(`
   WHERE idempotency_key IS NOT NULL;
 `);
 
+runMigrations(db);
+
 export function getSetting(key: string): string | null {
   const row = db
     .prepare("SELECT value FROM settings WHERE key = ?")
@@ -303,17 +307,35 @@ export function setSetting(key: string, value: string): void {
   ).run(key, value);
 }
 
+function getSiteSettingValue(siteId: number, key: string): string | null {
+  const row = db
+    .prepare("SELECT value FROM site_settings WHERE site_id = ? AND key = ?")
+    .get(siteId, key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+function setSiteSettingValue(siteId: number, key: string, value: string): void {
+  db.prepare(
+    `INSERT INTO site_settings (site_id, key, value) VALUES (?, ?, ?)
+     ON CONFLICT(site_id, key) DO UPDATE SET value = excluded.value`
+  ).run(siteId, key, value);
+}
+
 const HOME_WIDGETS_SEED_KEY = "home_widgets_seeded";
 const RECENTLY_VIEWED_WIDGET_SEED_KEY = "recently_viewed_widget_seeded";
 
-function insertRecentlyViewedWidget(sortOrder: number): void {
+function insertRecentlyViewedWidget(
+  siteId: number,
+  sortOrder: number
+): void {
   const defaults = HOME_WIDGET_META.recently_viewed.defaults;
 
   db.prepare(
     `INSERT INTO home_widgets
-       (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (site_id, type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
+    siteId,
     "recently_viewed",
     defaults.eyebrow,
     defaults.title,
@@ -328,27 +350,41 @@ function insertRecentlyViewedWidget(sortOrder: number): void {
   );
 }
 
-function seedHomeWidgets(): void {
-  if (getSetting(HOME_WIDGETS_SEED_KEY) === "1") return;
+function seedHomeWidgets(siteId: number): void {
+  if (getSiteSettingValue(siteId, HOME_WIDGETS_SEED_KEY) === "1") return;
 
   const { total } = db
-    .prepare("SELECT COUNT(*) AS total FROM home_widgets")
-    .get() as { total: number };
+    .prepare("SELECT COUNT(*) AS total FROM home_widgets WHERE site_id = ?")
+    .get(siteId) as { total: number };
 
   if (total > 0) {
-    setSetting(HOME_WIDGETS_SEED_KEY, "1");
+    setSiteSettingValue(siteId, HOME_WIDGETS_SEED_KEY, "1");
     return;
   }
 
   const insert = db.prepare(
     `INSERT INTO home_widgets
-       (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (site_id, type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
 
   db.transaction(() => {
-    insert.run("slider", null, null, null, null, null, 1, "wide", 8, "{}", 0);
     insert.run(
+      siteId,
+      "slider",
+      null,
+      null,
+      null,
+      null,
+      null,
+      1,
+      "wide",
+      8,
+      "{}",
+      0
+    );
+    insert.run(
+      siteId,
       "categories",
       "Bölüm 01 — Koleksiyon",
       "Ürün Grupları",
@@ -362,6 +398,7 @@ function seedHomeWidgets(): void {
       1
     );
     insert.run(
+      siteId,
       "featured_products",
       "Bölüm 02 — Seçki",
       "Öne Çıkan Ürünler",
@@ -375,6 +412,7 @@ function seedHomeWidgets(): void {
       2
     );
     insert.run(
+      siteId,
       "process",
       "Nasıl çalışır",
       "Tekliften\n*teslime*\ntemiz bir süreç.",
@@ -388,6 +426,7 @@ function seedHomeWidgets(): void {
       3
     );
     insert.run(
+      siteId,
       "new_products",
       "Bölüm 03 — Stok",
       "Yeni Gelenler",
@@ -400,32 +439,36 @@ function seedHomeWidgets(): void {
       "{}",
       4
     );
-    insertRecentlyViewedWidget(5);
-    setSetting(HOME_WIDGETS_SEED_KEY, "1");
+    insertRecentlyViewedWidget(siteId, 5);
+    setSiteSettingValue(siteId, HOME_WIDGETS_SEED_KEY, "1");
   })();
 }
 
 // Eski kurulumlarda seed bayrağı zaten 1 olduğundan yeni bölüm burada eklenir.
-function ensureRecentlyViewedWidget(): void {
-  if (getSetting(RECENTLY_VIEWED_WIDGET_SEED_KEY) === "1") return;
+function ensureRecentlyViewedWidget(siteId: number): void {
+  if (getSiteSettingValue(siteId, RECENTLY_VIEWED_WIDGET_SEED_KEY) === "1") {
+    return;
+  }
 
   const { total } = db
     .prepare(
-      "SELECT COUNT(*) AS total FROM home_widgets WHERE type = 'recently_viewed'"
+      "SELECT COUNT(*) AS total FROM home_widgets WHERE site_id = ? AND type = 'recently_viewed'"
     )
-    .get() as { total: number };
+    .get(siteId) as { total: number };
 
   if (total === 0) {
     const { next } = db
       .prepare(
-        "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets"
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets WHERE site_id = ?"
       )
-      .get() as { next: number };
-    insertRecentlyViewedWidget(next);
+      .get(siteId) as { next: number };
+    insertRecentlyViewedWidget(siteId, next);
   }
 
-  setSetting(RECENTLY_VIEWED_WIDGET_SEED_KEY, "1");
+  setSiteSettingValue(siteId, RECENTLY_VIEWED_WIDGET_SEED_KEY, "1");
 }
 
-seedHomeWidgets();
-ensureRecentlyViewedWidget();
+for (const siteId of getSiteIds()) {
+  seedHomeWidgets(siteId);
+  ensureRecentlyViewedWidget(siteId);
+}

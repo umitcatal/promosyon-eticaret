@@ -29,7 +29,11 @@ export function ScrollToTop() {
         <motion.button
           animate={{ opacity: 1, y: 0, scale: 1 }}
           aria-label="Yukarı çık"
-          className="flex size-12 items-center justify-center rounded-full bg-brand-600 text-paper shadow-[0_14px_36px_-10px_rgba(23,81,62,0.6)] ring-1 ring-brass-300/60 transition-colors hover:bg-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-500"
+          className="flex size-12 items-center justify-center rounded-full bg-brand-600 text-paper ring-1 ring-brass-300/60 transition-colors hover:bg-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-500"
+          style={{
+            boxShadow:
+              "0 14px 36px -10px color-mix(in oklab, var(--color-brand-600) 60%, transparent)",
+          }}
           exit={{ opacity: 0, y: 12, scale: 0.9 }}
           initial={{ opacity: 0, y: 12, scale: 0.9 }}
           key="scroll-to-top"

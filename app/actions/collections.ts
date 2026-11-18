@@ -4,7 +4,9 @@ import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AdminActionState } from "@/app/actions/admin";
 import { requireAdmin } from "@/lib/auth";
+import { siteTag } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
+import { getAdminSiteId } from "@/lib/site-request";
 import { parseHomeWidgetConfig } from "@/lib/home-widgets";
 import { normalizeSearchQuery, toLikePattern } from "@/lib/search-fold";
 import { slugify } from "@/lib/slug";
@@ -72,12 +74,18 @@ function filterExistingCategories(ids: number[]): number[] {
   return ids.filter((id) => existing.has(id));
 }
 
-function uniqueCollectionSlug(base: string, excludeId: number): string {
+function uniqueCollectionSlug(
+  siteId: number,
+  base: string,
+  excludeId: number
+): string {
   let candidate = base;
   for (let suffix = 2; suffix < 100; suffix += 1) {
     const conflict = db
-      .prepare("SELECT id FROM collections WHERE slug = ? AND id != ?")
-      .get(candidate, excludeId) as { id: number } | undefined;
+      .prepare(
+        "SELECT id FROM collections WHERE site_id = ? AND slug = ? AND id != ?"
+      )
+      .get(siteId, candidate, excludeId) as { id: number } | undefined;
     if (!conflict) return candidate;
     candidate = `${base}-${suffix}`;
   }
@@ -89,6 +97,7 @@ export async function saveCollectionAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const collectionId = Number(formData.get("collectionId") ?? 0);
   if (!Number.isInteger(collectionId) || collectionId < 0) {
@@ -128,33 +137,34 @@ export async function saveCollectionAction(
   let savedId = collectionId;
   try {
     db.transaction(() => {
-      const slug = uniqueCollectionSlug(base, collectionId);
+      const slug = uniqueCollectionSlug(siteId, base, collectionId);
 
       if (collectionId > 0) {
         const existing = db
-          .prepare("SELECT id FROM collections WHERE id = ?")
-          .get(collectionId);
+          .prepare("SELECT id FROM collections WHERE site_id = ? AND id = ?")
+          .get(siteId, collectionId);
         if (!existing) throw new Error("Koleksiyon bulunamadı.");
 
         db.prepare(
           `UPDATE collections
            SET name = ?, slug = ?, description = ?, active = ?,
                include_children = ?, updated_at = datetime('now')
-           WHERE id = ?`
+           WHERE id = ? AND site_id = ?`
         ).run(
           name,
           slug,
           description,
           active,
           includeChildren,
-          collectionId
+          collectionId,
+          siteId
         );
       } else {
         const result = db
           .prepare(
-            "INSERT INTO collections (name, slug, description, active, include_children) VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO collections (site_id, name, slug, description, active, include_children) VALUES (?, ?, ?, ?, ?, ?)"
           )
-          .run(name, slug, description, active, includeChildren);
+          .run(siteId, name, slug, description, active, includeChildren);
         savedId = Number(result.lastInsertRowid);
       }
 
@@ -185,6 +195,8 @@ export async function saveCollectionAction(
 
   updateTag("collections");
   updateTag("homepage");
+  updateTag(siteTag(siteId, "collections"));
+  updateTag(siteTag(siteId, "homepage"));
 
   if (collectionId === 0) {
     redirect(`/admin/koleksiyonlar/${savedId}`);
@@ -201,13 +213,21 @@ export async function deleteCollectionAction(
   formData: FormData
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const collectionId = Number(formData.get("collectionId"));
   if (!Number.isInteger(collectionId) || collectionId <= 0) return;
 
+  const collection = db
+    .prepare("SELECT id FROM collections WHERE site_id = ? AND id = ?")
+    .get(siteId, collectionId);
+  if (!collection) return;
+
   const widgets = db
-    .prepare("SELECT config FROM home_widgets WHERE type = 'collection'")
-    .all() as { config: string }[];
+    .prepare(
+      "SELECT config FROM home_widgets WHERE site_id = ? AND type = 'collection'"
+    )
+    .all(siteId) as { config: string }[];
   const referenced = widgets.some(
     (widget) =>
       parseHomeWidgetConfig(widget.config).collection?.collectionId ===
@@ -217,9 +237,14 @@ export async function deleteCollectionAction(
     redirect("/admin/koleksiyonlar?hata=referansli");
   }
 
-  db.prepare("DELETE FROM collections WHERE id = ?").run(collectionId);
+  db.prepare("DELETE FROM collections WHERE site_id = ? AND id = ?").run(
+    siteId,
+    collectionId
+  );
   updateTag("collections");
   updateTag("homepage");
+  updateTag(siteTag(siteId, "collections"));
+  updateTag(siteTag(siteId, "homepage"));
   redirect("/admin/koleksiyonlar?durum=silindi");
 }
 
@@ -228,13 +253,16 @@ export async function toggleCollectionActiveAction(
   active: boolean
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (!Number.isInteger(collectionId) || collectionId <= 0) return;
 
   db.prepare(
-    "UPDATE collections SET active = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(active ? 1 : 0, collectionId);
+    "UPDATE collections SET active = ?, updated_at = datetime('now') WHERE id = ? AND site_id = ?"
+  ).run(active ? 1 : 0, collectionId, siteId);
   updateTag("collections");
   updateTag("homepage");
+  updateTag(siteTag(siteId, "collections"));
+  updateTag(siteTag(siteId, "homepage"));
 }
 
 export async function searchCollectionProductsAction(

@@ -62,31 +62,50 @@ npm run dev
 | Değişken | Açıklama |
 | --- | --- |
 | `SESSION_PASSWORD` | iron-session şifreleme anahtarı (en az 32 karakter) |
-| `NEXT_PUBLIC_SITE_URL` | Sitenin tam adresi (metadata, sitemap, Turnstile hostname kontrolü) |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile kayıt doğrulaması |
+| `NEXT_PUBLIC_SITE_URL` | Varsayılan sitenin tam adresi (yalnızca fallback; asıl eşleme aşağıdaki site değişkenleriyle yapılır) |
+| `DEFAULT_SITE_ID` | Bilinmeyen host ve fallback durumlarında kullanılacak site (varsayılan `1`) |
+| `SITE_IDS` | Aktif site kimlikleri, ör. `1,2` |
+| `SITE_HOSTS` | Host → site eşlemesi, ör. `site1.com:1,www.site1.com:1,site2.com:2` |
+| `SITE_URLS` | Site → public URL eşlemesi, ör. `1:https://site1.com,2:https://site2.com` |
+| `TURNSTILE_SITE_KEY_1` / `TURNSTILE_SECRET_KEY_1` | 1. site Cloudflare Turnstile anahtarları |
+| `TURNSTILE_SITE_KEY_2` / `TURNSTILE_SECRET_KEY_2` | 2. site Cloudflare Turnstile anahtarları |
 | `DB_PATH` | SQLite dosya yolu (varsayılan `./data/promosyon.db`) |
 | `PRODUCT_XML_URL` | Ürün/kategori XML adresi (yalnızca sunucudan çekilebilir) |
 | `PRODUCT_XML_PATH` | XML dosyasının kaydedilip okunacağı yol (varsayılan `./data/xml/urunler.xml`) |
 | `PRICE_XML_URL` | Fiyat XML/API adresi (henüz yok, admin panelden de girilebilir) |
 | `SYNC_SECRET` | `/api/sync` uç noktası için Bearer anahtarı |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google ile giriş (boşsa buton gizlenir) |
-| `GOOGLE_REDIRECT_URI` | `https://<domain>/api/auth/callback/google` |
 | `ADMIN_*` | `npm run db:admin` için varsayılan admin bilgileri |
 
-Cloudflare Turnstile widget’ında sitenin hostname’ini (yerel geliştirme için
-gerekirse `localhost`) izinli alan adlarına ekleyin. `NEXT_PUBLIC_SITE_URL`
-aynı hostname’i içermelidir; secret key yalnızca sunucu ortamında tutulmalıdır.
+Cloudflare Turnstile widget'ında her sitenin hostname'lerini (`SITE_HOSTS` ile
+aynı alan adları) izinli listeye ekleyin. Secret key yalnızca sunucu ortamında
+tutulur. Eski `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET_KEY`
+değişkenleri yalnızca varsayılan site için fallback olarak okunur.
+
+### Çoklu site
+
+Tek Next.js süreci, tek SQLite dosyası ve tek `public/uploads` klasörü iki
+domaini de besler. `proxy.ts` gelen `Host` başlığını `SITE_HOSTS` ile eşleyip
+isteği `/{siteId}/...` yoluna rewrite eder. Ürünler, kategoriler, kullanıcılar
+ve medya ortaktır; sayfalar, menü, slider, anasayfa widget'ları, koleksiyonlar,
+siparişler ve site ayarları (logo, iletişim, mail, WhatsApp, GA, tema) site
+bazlıdır. Admin panelde üstteki site seçici ile aktif site değiştirilir.
+
+Yerel geliştirmede iki siteyi denemek için `SITE_HOSTS` içine
+`localhost:1,127.0.0.1:2` ekleyip istekleri uygun `Host` başlığıyla gönderin
+(veya `http://localhost:3000/1/...` gibi doğrudan site yolunu kullanın; bu
+yollar `X-Robots-Tag: noindex` alır).
 
 ## Google ile Giriş
 
 1. Google Cloud Console > APIs & Services > Credentials bölümünde OAuth Client
    (Web application) oluşturun.
-2. Authorized redirect URI olarak
-   `https://<domain>/api/auth/callback/google` ekleyin.
-3. `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` ve `GOOGLE_REDIRECT_URI`
-   değerlerini `.env.local` dosyasına yazın. `GOOGLE_REDIRECT_URI` production'da
-   public `https://` origin'i olmalı ve Console'daki yetkili URI ile birebir
-   eşleşmeli; login dönüş adresi bu değerden türetilir.
+2. Authorized redirect URI listesine her iki domain için
+   `https://<domain>/api/auth/callback/google` ekleyin; JS origin olarak da
+   iki domaini tanımlayın.
+3. `GOOGLE_CLIENT_ID` ve `GOOGLE_CLIENT_SECRET` değerlerini `.env.local`
+   dosyasına yazın. Dönüş adresi istek host'una göre `SITE_URLS` üzerinden
+   üretilir; ayrıca `GOOGLE_REDIRECT_URI` tanımlamaya gerek yoktur.
 
 ## XML Senkronizasyonu
 

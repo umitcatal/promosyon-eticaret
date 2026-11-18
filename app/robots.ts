@@ -1,7 +1,13 @@
 import type { MetadataRoute } from "next";
-import { SITE_BASE } from "@/lib/seo";
+import { connection } from "next/server";
+import { getRequestSiteId } from "@/lib/site-request";
+import { getSiteBaseUrl } from "@/lib/sites";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  await connection();
+
+  const siteId = await getRequestSiteId();
+
   return {
     rules: [
       {
@@ -12,6 +18,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin", "/api/"],
       },
     ],
-    sitemap: `${SITE_BASE}/sitemap.xml`,
+    sitemap: `${getSiteBaseUrl(siteId)}/sitemap.xml`,
   };
 }

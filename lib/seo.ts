@@ -1,21 +1,28 @@
 import type { Metadata } from "next";
 
-export const SITE_BASE =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-
-export const openGraphBase: NonNullable<Metadata["openGraph"]> = {
-  type: "website",
-  siteName: "Kurumsal Promo | Kurumsal Promosyon Ürünleri",
-  locale: "tr_TR",
-  images: [
-    {
-      url: "/logo-meta.jpg",
-      width: 1200,
-      height: 630,
-      alt: "Kurumsal Promo - Kurumsal Promosyon Ürünleri",
-    },
-  ],
+type OpenGraphIdentity = {
+  siteName: string;
+  ogImageUrl: string;
 };
+
+export function openGraphBase(
+  baseUrl: string,
+  identity: OpenGraphIdentity
+): NonNullable<Metadata["openGraph"]> {
+  return {
+    type: "website",
+    siteName: identity.siteName,
+    locale: "tr_TR",
+    images: [
+      {
+        url: absoluteUrl(baseUrl, identity.ogImageUrl) ?? identity.ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: identity.siteName,
+      },
+    ],
+  };
+}
 
 // Slugs are editor-supplied, so reject anything that could escape the path
 // (spaces, quotes, backslashes, percent-encoded separators) before it reaches a
@@ -33,21 +40,26 @@ export function cleanPath(path: string): string {
   return `/${path.replace(/^\/+/, "")}`;
 }
 
-export function absoluteUrl(url: string): string | null {
+export function absoluteUrl(baseUrl: string, url: string): string | null {
   try {
-    return new URL(url, SITE_BASE).toString();
+    return new URL(url, baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`).toString();
   } catch {
     return null;
   }
 }
 
+export function canonicalPath(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/+$/, "")}${cleanPath(path)}`;
+}
+
 // Variant images arrive absolute (S3) while category uploads arrive relative
 // (/uploads/...); og:image and image-sitemap <loc> both need the absolute form.
 export function absoluteImages(
+  baseUrl: string,
   ...urls: (string | null | undefined)[]
 ): string[] {
   return urls
     .filter((url): url is string => Boolean(url))
-    .map(absoluteUrl)
+    .map((url) => absoluteUrl(baseUrl, url))
     .filter((url): url is string => url !== null);
 }

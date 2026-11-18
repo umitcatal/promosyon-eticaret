@@ -1,23 +1,57 @@
+import { getDefaultSiteId, getSiteBaseUrl, getSiteHosts, normalizeHost } from "./sites";
+
 type SiteverifyResponse = {
   success?: boolean;
   hostname?: string;
   action?: string;
 };
 
+export function getTurnstileSiteKey(siteId: number): string {
+  const scoped = process.env[`TURNSTILE_SITE_KEY_${siteId}`]?.trim();
+  if (scoped) return scoped;
+
+  if (siteId === getDefaultSiteId()) {
+    return (
+      process.env.TURNSTILE_SITE_KEY?.trim() ||
+      process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() ||
+      ""
+    );
+  }
+  return "";
+}
+
+function getTurnstileSecretKey(siteId: number): string {
+  const scoped = process.env[`TURNSTILE_SECRET_KEY_${siteId}`]?.trim();
+  if (scoped) return scoped;
+
+  if (siteId === getDefaultSiteId()) {
+    return process.env.TURNSTILE_SECRET_KEY?.trim() ?? "";
+  }
+  return "";
+}
+
+function allowedHostnames(siteId: number): Set<string> {
+  const hosts = new Set(getSiteHosts(siteId));
+  if (hosts.size === 0) {
+    try {
+      hosts.add(new URL(getSiteBaseUrl(siteId)).hostname);
+    } catch {
+      // no usable host; verification will fail below
+    }
+  }
+  return hosts;
+}
+
 export async function verifyTurnstile(
   token: string,
-  expectedAction: string
+  expectedAction: string,
+  siteId: number
 ): Promise<boolean> {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!secret || !siteUrl) return false;
+  const secret = getTurnstileSecretKey(siteId);
+  if (!secret) return false;
 
-  let expectedHostname: string;
-  try {
-    expectedHostname = new URL(siteUrl).hostname;
-  } catch {
-    return false;
-  }
+  const hosts = allowedHostnames(siteId);
+  if (hosts.size === 0) return false;
 
   try {
     const response = await fetch(
@@ -35,7 +69,8 @@ export async function verifyTurnstile(
     return (
       result.success === true &&
       result.action === expectedAction &&
-      result.hostname === expectedHostname
+      typeof result.hostname === "string" &&
+      hosts.has(normalizeHost(result.hostname))
     );
   } catch {
     return false;

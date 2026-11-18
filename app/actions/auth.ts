@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { endSession, startSession } from "@/lib/session";
+import { getRequestSiteId } from "@/lib/site-request";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { safeNextPath } from "@/lib/url";
 import { createUser, findUserByEmail } from "@/lib/users";
@@ -49,7 +50,13 @@ export async function signupAction(
 
   const { firstName, lastName, email, phone, password, turnstileToken } =
     parsed.data;
-  if (!(await verifyTurnstile(turnstileToken, "signup"))) {
+  if (
+    !(await verifyTurnstile(
+      turnstileToken,
+      "signup",
+      await getRequestSiteId()
+    ))
+  ) {
     return { error: "Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin." };
   }
 
