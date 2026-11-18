@@ -8,6 +8,13 @@ export type SiteRow = {
   created_at: string;
 };
 
+export type SiteFavicon = {
+  icon32: string;
+  apple: string;
+  icon192: string;
+  icon512: string;
+};
+
 export type SiteIdentity = {
   siteId: number;
   siteName: string;
@@ -22,11 +29,40 @@ export const SEO_TITLE_KEY = "seo_title";
 export const SEO_DESCRIPTION_KEY = "seo_description";
 export const OG_IMAGE_KEY = "og_image_url";
 export const LOGO_URL_KEY = "logo_url";
+export const FAVICON_KEY = "favicon";
 
 const DEFAULT_SITE_NAME = "Kurumsal Promo";
 const DEFAULT_SEO_DESCRIPTION =
   "Kurumsal promosyon ürünleri: kalem, çanta, teknoloji, termos ve daha fazlası. Şirket logonuzla özelleştirilebilen yüzlerce ürün.";
 const DEFAULT_OG_IMAGE = "/logo-meta.jpg";
+
+export const DEFAULT_FAVICON: SiteFavicon = {
+  icon32: "/favicon/favicon-32x32.png",
+  apple: "/favicon/apple-touch-icon.png",
+  icon192: "/favicon/android-chrome-192x192.png",
+  icon512: "/favicon/android-chrome-512x512.png",
+};
+
+const FAVICON_KEYS = ["icon32", "apple", "icon192", "icon512"] as const;
+
+function parseFavicon(raw: string | null): SiteFavicon | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<SiteFavicon> | null;
+    if (!parsed) return null;
+    const valid = FAVICON_KEYS.every((key) => {
+      const value = parsed[key];
+      return (
+        typeof value === "string" &&
+        value.startsWith("/uploads/favicon/") &&
+        !value.includes("..")
+      );
+    });
+    return valid ? (parsed as SiteFavicon) : null;
+  } catch {
+    return null;
+  }
+}
 
 export function listSites(): SiteRow[] {
   return db
@@ -57,6 +93,10 @@ export function setSiteSetting(siteId: number, key: string, value: string) {
     `INSERT INTO site_settings (site_id, key, value) VALUES (?, ?, ?)
      ON CONFLICT(site_id, key) DO UPDATE SET value = excluded.value`
   ).run(siteId, key, value);
+}
+
+export function getSiteFavicon(siteId: number): SiteFavicon | null {
+  return parseFavicon(getSiteSetting(siteId, FAVICON_KEY));
 }
 
 export function getSiteSettings(siteId: number): Record<string, string> {

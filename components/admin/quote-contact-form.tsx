@@ -26,7 +26,7 @@ export function QuoteContactForm({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor="quotePhone">
-            Telefon
+            Cep Telefonu
           </label>
           <input
             autoComplete="off"
@@ -35,7 +35,7 @@ export function QuoteContactForm({
             id="quotePhone"
             inputMode="tel"
             name="quotePhone"
-            placeholder="0212 123 45 67"
+            placeholder="0555 123 45 67"
             type="tel"
           />
           <p className="mt-1 text-xs leading-5 text-zinc-500">
@@ -43,6 +43,27 @@ export function QuoteContactForm({
             ürün detayındaki Telefon butonu bu numarayı arar; ürün butonunda{" "}
             {QUOTE_PHONE_HOURS} çalışma saatleri görünür. Boş bırakılırsa
             WhatsApp destek numarası kullanılır.
+          </p>
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="contactLandline">
+            Sabit Telefon
+          </label>
+          <input
+            autoComplete="off"
+            className={inputClass}
+            defaultValue={settings.landline}
+            id="contactLandline"
+            inputMode="tel"
+            name="contactLandline"
+            placeholder="0212 123 45 67"
+            type="tel"
+          />
+          <p className="mt-1 text-xs leading-5 text-zinc-500">
+            Yalnızca footer&apos;daki İletişim bölümünde cep telefonu ile
+            birlikte gösterilir; header ve ürün sayfasındaki butonlarda
+            kullanılmaz. Boş bırakılırsa gizlenir.
           </p>
         </div>
 

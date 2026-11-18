@@ -8,10 +8,12 @@ import { siteTag } from "@/lib/cache-tags";
 import { ADMIN_SITE_COOKIE, getAdminSiteId } from "@/lib/site-request";
 import { parseSiteId } from "@/lib/sites";
 import {
+  FAVICON_KEY,
   OG_IMAGE_KEY,
   SEO_DESCRIPTION_KEY,
   SEO_TITLE_KEY,
   SITE_NAME_KEY,
+  getSiteFavicon,
   setSiteSetting,
 } from "@/lib/site-settings";
 import {
@@ -20,6 +22,7 @@ import {
   THEME_PRIMARY_KEY,
 } from "@/lib/site-theme";
 import { isThemePresetId, normalizeHex } from "@/lib/theme";
+import { deleteFaviconImages, saveFaviconImages } from "@/lib/uploads";
 
 export async function switchAdminSiteAction(formData: FormData): Promise<void> {
   await requireAdmin();
@@ -41,6 +44,7 @@ export type SiteIdentityState = {
   ok?: boolean;
   error?: string;
   message?: string;
+  nonce?: string;
 };
 
 export async function saveSiteIdentityAction(
@@ -76,6 +80,49 @@ export async function saveSiteIdentityAction(
   refresh();
 
   return { ok: true, message: "Site kimliği kaydedildi." };
+}
+
+export async function saveSiteFaviconAction(
+  _prev: SiteIdentityState,
+  formData: FormData
+): Promise<SiteIdentityState> {
+  await requireAdmin();
+  const siteId = await getAdminSiteId();
+
+  const file = formData.get("favicon");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Lütfen bir favicon görseli seçin." };
+  }
+
+  const current = getSiteFavicon(siteId);
+
+  try {
+    const next = await saveFaviconImages(file);
+    setSiteSetting(siteId, FAVICON_KEY, JSON.stringify(next));
+    if (current) await deleteFaviconImages(current);
+    updateTag(siteTag(siteId, "settings"));
+    updateTag("settings");
+    refresh();
+    return {
+      ok: true,
+      message: "Favicon güncellendi.",
+      nonce: crypto.randomUUID(),
+    };
+  } catch (error) {
+    return { error: (error as Error).message };
+  }
+}
+
+export async function removeSiteFaviconAction(): Promise<void> {
+  await requireAdmin();
+  const siteId = await getAdminSiteId();
+  const current = getSiteFavicon(siteId);
+
+  setSiteSetting(siteId, FAVICON_KEY, "");
+  if (current) await deleteFaviconImages(current);
+  updateTag(siteTag(siteId, "settings"));
+  updateTag("settings");
+  refresh();
 }
 
 export type ThemeActionState = {

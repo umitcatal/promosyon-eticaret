@@ -72,11 +72,11 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     icons: {
       icon: [
-        { url: "/favicon/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-        { url: "/favicon/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+        { url: "/favicon/32", type: "image/png", sizes: "32x32" },
+        { url: "/favicon/192", type: "image/png", sizes: "192x192" },
       ],
       apple: {
-        url: "/favicon/apple-touch-icon.png",
+        url: "/favicon/apple",
         type: "image/png",
         sizes: "180x180",
       },

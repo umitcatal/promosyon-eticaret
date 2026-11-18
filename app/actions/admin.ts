@@ -29,6 +29,7 @@ import {
 import { normalizePhoneNumber } from "@/lib/quote";
 import {
   CONTACT_ADDRESS_SETTING_KEY,
+  CONTACT_LANDLINE_SETTING_KEY,
   QUOTE_EMAIL_SETTING_KEY,
   QUOTE_PHONE_SETTING_KEY,
 } from "@/lib/quote-contact";
@@ -750,6 +751,7 @@ export async function saveQuoteContactAction(
   const siteId = await getAdminSiteId();
 
   const rawPhone = String(formData.get("quotePhone") ?? "").trim();
+  const rawLandline = String(formData.get("contactLandline") ?? "").trim();
   const rawEmail = String(formData.get("quoteEmail") ?? "").trim();
   const rawAddress = String(formData.get("contactAddress") ?? "").trim();
 
@@ -760,6 +762,13 @@ export async function saveQuoteContactAction(
         "Geçerli bir telefon numarası girin. Örnek: 0212 123 45 67 veya +90 555 123 45 67.",
     };
   }
+  const landline = rawLandline ? normalizePhoneNumber(rawLandline) : null;
+  if (rawLandline && !landline) {
+    return {
+      error:
+        "Geçerli bir sabit telefon numarası girin. Örnek: 0212 123 45 67.",
+    };
+  }
   if (rawEmail && !z.email().safeParse(rawEmail).success) {
     return { error: "Geçerli bir e-posta adresi girin." };
   }
@@ -768,6 +777,7 @@ export async function saveQuoteContactAction(
   }
 
   setSiteSetting(siteId, QUOTE_PHONE_SETTING_KEY, phone ?? "");
+  setSiteSetting(siteId, CONTACT_LANDLINE_SETTING_KEY, landline ?? "");
   setSiteSetting(siteId, QUOTE_EMAIL_SETTING_KEY, rawEmail);
   setSiteSetting(siteId, CONTACT_ADDRESS_SETTING_KEY, rawAddress);
   updateTag("settings");

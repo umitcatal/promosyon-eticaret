@@ -1,6 +1,7 @@
 import { SyncPricesButton } from "@/components/admin/sync-buttons";
 import { LogoForm } from "@/components/admin/logo-form";
 import { CatalogForm } from "@/components/admin/catalog-form";
+import { SiteFaviconForm } from "@/components/admin/site-favicon-form";
 import { SiteIdentityForm } from "@/components/admin/site-identity-form";
 import { readCatalogSettings } from "@/lib/catalog-settings";
 import { GoogleTagForm } from "@/components/admin/google-tag-form";
@@ -16,7 +17,11 @@ import { getVatRate } from "@/lib/queries";
 import { getPriceXmlUrl } from "@/lib/price-sync";
 import { readQuoteContactSettings } from "@/lib/quote-contact";
 import { getAdminSiteId } from "@/lib/site-request";
-import { getSiteIdentity, getSiteSetting } from "@/lib/site-settings";
+import {
+  getSiteFavicon,
+  getSiteIdentity,
+  getSiteSetting,
+} from "@/lib/site-settings";
 import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
@@ -29,6 +34,7 @@ export default async function AdminSettingsPage() {
   const identity = getSiteIdentity(siteId);
   const priceXmlUrl = getPriceXmlUrl() ?? "";
   const logoUrl = getSiteSetting(siteId, "logo_url");
+  const favicon = getSiteFavicon(siteId);
   const googleTag = getGoogleTagIdSetting(siteId);
   const vatRate = getVatRate();
   const mailSettings = getMailSettingsPublic(siteId);
@@ -74,6 +80,18 @@ export default async function AdminSettingsPage() {
         </p>
         <div className="mt-4">
           <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Site Favicon</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Tarayıcı sekmesinde, mobil ana ekranda ve paylaşım önizlemelerinde
+          görünen site ikonunu yönetin. Her alan adı kendi favicon&apos;unu
+          kullanır; yüklenmediğinde varsayılan ikon gösterilir.
+        </p>
+        <div className="mt-4">
+          <SiteFaviconForm favicon={favicon} />
         </div>
       </section>
 
