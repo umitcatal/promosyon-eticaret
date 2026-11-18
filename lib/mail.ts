@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { z } from "zod";
-import { db, getSetting } from "@/lib/db";
+import { db } from "@/lib/db";
+import { getSiteIdentity, getSiteSetting } from "@/lib/site-settings";
 import { formatDateTime, formatPrice } from "@/lib/format";
 import type { OrderItemRow } from "@/lib/orders";
 
@@ -23,8 +24,8 @@ export type MailSettingsPublic = Omit<MailSettings, "pass"> & {
   hasPass: boolean;
 };
 
-export function getMailSettings(): MailSettings | null {
-  const raw = getSetting(MAIL_SETTINGS_KEY);
+export function getMailSettings(siteId: number): MailSettings | null {
+  const raw = getSiteSetting(siteId, MAIL_SETTINGS_KEY);
   if (!raw) return null;
   try {
     const parsed = mailSettingsSchema.safeParse(JSON.parse(raw));
@@ -34,8 +35,8 @@ export function getMailSettings(): MailSettings | null {
   }
 }
 
-export function getMailSettingsPublic(): MailSettingsPublic | null {
-  const settings = getMailSettings();
+export function getMailSettingsPublic(siteId: number): MailSettingsPublic | null {
+  const settings = getMailSettings(siteId);
   if (!settings) return null;
   const { pass, ...publicSettings } = settings;
   return { ...publicSettings, hasPass: pass.length > 0 };
@@ -67,6 +68,7 @@ type OrderMailRow = {
   note: string | null;
   total: number | null;
   created_at: string;
+  site_id: number;
   first_name: string;
   last_name: string;
   email: string;
@@ -77,7 +79,11 @@ function itemPriceLabel(item: OrderItemRow): string {
   return formatPrice(item.unit_price) ?? "Teklif";
 }
 
-function buildQuoteHtml(order: OrderMailRow, items: OrderItemRow[]): string {
+function buildQuoteHtml(
+  order: OrderMailRow,
+  items: OrderItemRow[],
+  siteName: string
+): string {
   const customerName = `${order.first_name} ${order.last_name}`;
   const rows = items
     .map((item) => {
@@ -103,7 +109,7 @@ function buildQuoteHtml(order: OrderMailRow, items: OrderItemRow[]): string {
   return `<div style="margin:0;padding:24px;background:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
     <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e7;border-radius:12px;padding:24px;">
       <div style="font-size:18px;font-weight:bold;color:#18181b;">Yeni Sipariş Teklifi #${order.id}</div>
-      <div style="margin-top:4px;font-size:13px;color:#52525b;">${escapeHtml(formatDateTime(order.created_at))} · Kurumsal Promo</div>
+      <div style="margin-top:4px;font-size:13px;color:#52525b;">${escapeHtml(formatDateTime(order.created_at))} · ${escapeHtml(siteName)}</div>
 
       <table style="margin-top:16px;width:100%;border-collapse:collapse;font-size:14px;color:#18181b;">
         <tr><td style="padding:4px 0;color:#52525b;width:120px;">Müşteri</td><td style="padding:4px 0;">${escapeHtml(customerName)}</td></tr>
@@ -154,15 +160,9 @@ function buildQuoteText(order: OrderMailRow, items: OrderItemRow[]): string {
 }
 
 export async function sendOrderQuoteEmail(orderId: number): Promise<void> {
-  const settings = getMailSettings();
-  if (!settings || settings.recipients.length === 0) {
-    console.info("[mail] mail ayarları veya alıcılar tanımlı değil, teklif maili atlandı");
-    return;
-  }
-
   const order = db
     .prepare(
-      `SELECT o.id, o.note, o.total, o.created_at,
+      `SELECT o.id, o.note, o.total, o.created_at, o.site_id,
               u.first_name, u.last_name, u.email, u.phone
        FROM orders o JOIN users u ON u.id = o.user_id
        WHERE o.id = ?`
@@ -170,6 +170,13 @@ export async function sendOrderQuoteEmail(orderId: number): Promise<void> {
     .get(orderId) as OrderMailRow | undefined;
   if (!order) throw new Error(`Sipariş bulunamadı: ${orderId}`);
 
+  const settings = getMailSettings(order.site_id);
+  if (!settings || settings.recipients.length === 0) {
+    console.info("[mail] mail ayarları veya alıcılar tanımlı değil, teklif maili atlandı");
+    return;
+  }
+
+  const identity = getSiteIdentity(order.site_id);
   const items = db
     .prepare("SELECT * FROM order_items WHERE order_id = ? ORDER BY id")
     .all(orderId) as OrderItemRow[];
@@ -180,7 +187,7 @@ export async function sendOrderQuoteEmail(orderId: number): Promise<void> {
       from: { name: settings.fromName, address: settings.fromAddress },
       to: settings.recipients.join(", "),
       subject: `Yeni Sipariş Teklifi #${order.id} — ${order.first_name} ${order.last_name}`,
-      html: buildQuoteHtml(order, items),
+      html: buildQuoteHtml(order, items, identity.siteName),
       text: buildQuoteText(order, items),
     });
   } finally {
@@ -188,23 +195,24 @@ export async function sendOrderQuoteEmail(orderId: number): Promise<void> {
   }
 }
 
-export async function sendTestMail(to: string): Promise<void> {
-  const settings = getMailSettings();
+export async function sendTestMail(to: string, siteId: number): Promise<void> {
+  const settings = getMailSettings(siteId);
   if (!settings) {
     throw new Error("Mail ayarları kaydedilmemiş. Önce ayarları kaydedin.");
   }
+  const identity = getSiteIdentity(siteId);
 
   const transporter = createMailTransport(settings);
   try {
     await transporter.sendMail({
       from: { name: settings.fromName, address: settings.fromAddress },
       to,
-      subject: "Kurumsal Promo — Test Maili",
+      subject: `${identity.siteName} — Test Maili`,
       html: `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#18181b;">
-        <p>Bu bir test mailidir. Kurumsal Promo sipariş teklifi bildirimleri bu SMTP ayarlarıyla gönderilecek.</p>
+        <p>Bu bir test mailidir. ${escapeHtml(identity.siteName)} sipariş teklifi bildirimleri bu SMTP ayarlarıyla gönderilecek.</p>
         <p style="color:#52525b;">${escapeHtml(formatDateTime(new Date().toISOString()))}</p>
       </div>`,
-      text: `Bu bir test mailidir. Kurumsal Promo sipariş teklifi bildirimleri bu SMTP ayarlarıyla gönderilecek.\n${formatDateTime(new Date().toISOString())}`,
+      text: `Bu bir test mailidir. ${identity.siteName} sipariş teklifi bildirimleri bu SMTP ayarlarıyla gönderilecek.\n${formatDateTime(new Date().toISOString())}`,
     });
   } finally {
     transporter.close();

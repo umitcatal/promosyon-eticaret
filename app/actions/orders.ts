@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCart, saveCart } from "@/lib/cart";
 import { db } from "@/lib/db";
 import { sendOrderQuoteEmail } from "@/lib/mail";
+import { getRequestSiteId } from "@/lib/site-request";
 
 const ORDER_COOLDOWN_SECONDS = 60;
 const HOURLY_ORDER_LIMIT = 5;
@@ -26,14 +27,15 @@ export type OrderFormState = { error?: string };
 type OrderCreationResult = { orderId: number } | { error: string };
 
 function findOrderIdByIdempotencyKey(
+  siteId: number,
   userId: number,
   idempotencyKey: string
 ): number | undefined {
   const row = db
     .prepare(
-      "SELECT id FROM orders WHERE user_id = ? AND idempotency_key = ?"
+      "SELECT id FROM orders WHERE site_id = ? AND user_id = ? AND idempotency_key = ?"
     )
-    .get(userId, idempotencyKey) as { id: number } | undefined;
+    .get(siteId, userId, idempotencyKey) as { id: number } | undefined;
   return row?.id;
 }
 
@@ -44,6 +46,8 @@ export async function createOrderAction(
   const user = await getCurrentUser();
   if (!user) redirect("/giris?next=%2Fsepet");
 
+  const siteId = await getRequestSiteId();
+
   const parsedKey = idempotencyKeySchema.safeParse(
     formData.get("idempotencyKey")
   );
@@ -52,7 +56,11 @@ export async function createOrderAction(
   }
   const idempotencyKey = parsedKey.data;
 
-  const existingOrderId = findOrderIdByIdempotencyKey(user.id, idempotencyKey);
+  const existingOrderId = findOrderIdByIdempotencyKey(
+    siteId,
+    user.id,
+    idempotencyKey
+  );
   if (existingOrderId !== undefined) {
     await saveCart({});
     redirect(`/hesabim/siparisler?olustu=${existingOrderId}`);
@@ -94,6 +102,7 @@ export async function createOrderAction(
 
   const result = db.transaction((): OrderCreationResult => {
     const duplicateOrderId = findOrderIdByIdempotencyKey(
+      siteId,
       user.id,
       idempotencyKey
     );
@@ -148,10 +157,10 @@ export async function createOrderAction(
 
     const info = db
       .prepare(
-        `INSERT INTO orders (user_id, idempotency_key, status, note, total)
-         VALUES (?, ?, 'yeni', ?, ?)`
+        `INSERT INTO orders (site_id, user_id, idempotency_key, status, note, total)
+         VALUES (?, ?, ?, 'yeni', ?, ?)`
       )
-      .run(user.id, idempotencyKey, note || null, total);
+      .run(siteId, user.id, idempotencyKey, note || null, total);
     const orderId = Number(info.lastInsertRowid);
 
     const insertItem = db.prepare(

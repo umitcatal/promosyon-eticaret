@@ -1,0 +1,188 @@
+import { SyncPricesButton } from "@/components/admin/sync-buttons";
+import { LogoForm } from "@/components/admin/logo-form";
+import { CatalogForm } from "@/components/admin/catalog-form";
+import { SiteIdentityForm } from "@/components/admin/site-identity-form";
+import { readCatalogSettings } from "@/lib/catalog-settings";
+import { GoogleTagForm } from "@/components/admin/google-tag-form";
+import { MailSettingsForm } from "@/components/admin/mail-settings-form";
+import { QuoteContactForm } from "@/components/admin/quote-contact-form";
+import { SettingsForm } from "@/components/admin/settings-form";
+import { VatRateForm } from "@/components/admin/vat-rate-form";
+import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
+import { getGoogleTagIdSetting } from "@/lib/analytics";
+import { db } from "@/lib/db";
+import { getMailSettingsPublic } from "@/lib/mail";
+import { getVatRate } from "@/lib/queries";
+import { getPriceXmlUrl } from "@/lib/price-sync";
+import { readQuoteContactSettings } from "@/lib/quote-contact";
+import { getAdminSiteId } from "@/lib/site-request";
+import { getSiteIdentity, getSiteSetting } from "@/lib/site-settings";
+import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
+import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
+
+export const metadata = {
+  title: "Ayarlar",
+};
+
+export default async function AdminSettingsPage() {
+  const siteId = await getAdminSiteId();
+  const identity = getSiteIdentity(siteId);
+  const priceXmlUrl = getPriceXmlUrl() ?? "";
+  const logoUrl = getSiteSetting(siteId, "logo_url");
+  const googleTag = getGoogleTagIdSetting(siteId);
+  const vatRate = getVatRate();
+  const mailSettings = getMailSettingsPublic(siteId);
+  const whatsapp = readWhatsAppSupport(siteId);
+  const quoteContact = readQuoteContactSettings(siteId);
+  const catalog = readCatalogSettings(siteId);
+  const productXmlUrl =
+    process.env.PRODUCT_XML_URL || DEFAULT_PRODUCT_XML_URL;
+  const variantPrices = db
+    .prepare(
+      "SELECT COUNT(*) AS total, SUM(CASE WHEN price IS NOT NULL THEN 1 ELSE 0 END) AS priced FROM variants WHERE active = 1"
+    )
+    .get() as { total: number; priced: number | null };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-lg font-bold text-zinc-900">
+          {identity.siteName} Ayarları
+        </h2>
+        <p className="text-sm text-zinc-500">
+          Site kimliği, veri kaynakları ve fiyatlandırma ayarları
+        </p>
+      </div>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Site Kimliği</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Site adı, arama motoru başlığı ve açıklaması bu bölümden yönetilir.
+          Renkler ve tema için soldaki &quot;Tema&quot; bölümünü kullanın.
+        </p>
+        <div className="mt-4">
+          <SiteIdentityForm identity={identity} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Site Logosu</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Yüklenen logo, sitede &quot;{identity.siteName}&quot; yazısının
+          göründüğü header ve footer alanlarında gösterilir. Logo
+          yüklenmediğinde yazı korunur.
+        </p>
+        <div className="mt-4">
+          <LogoForm logoUrl={logoUrl} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Üst Bar Katalog</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Header’ın en üst barında ortalanan katalog bağlantısını yönetin.
+          Harici bir adres kullanabilir veya 150 MB’a kadar PDF yükleyebilirsiniz.
+        </p>
+        <div className="mt-4">
+          <CatalogForm settings={catalog} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">
+          WhatsApp Destek Hattı
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Sitenin sağ alt köşesinde görünen WhatsApp destek butonunu ve sohbet
+          penceresini yönetin. Karşılama mesajı ile mesajların yönlendirileceği
+          WhatsApp numarasını buradan değiştirebilirsiniz.
+        </p>
+        <div className="mt-4">
+          <WhatsAppSettingsForm settings={whatsapp} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">İletişim Bilgileri</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Header&apos;daki telefon butonu, footer&apos;daki İletişim bölümü ve
+          ürün detay sayfasındaki &quot;WhatsApp Teklif Al&quot;,
+          &quot;Telefon&quot; ve &quot;Mail Teklif İste&quot; butonlarının
+          yönlendirileceği iletişim kanallarını yönetin. WhatsApp butonu,
+          yukarıdaki WhatsApp destek numarasını kullanır.
+        </p>
+        <div className="mt-4">
+          <QuoteContactForm settings={quoteContact} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">
+          Google Analytics / GTM
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Google Tag Manager veya Google Analytics 4 kimliğinizi girerek
+          sitenin <code>&lt;head&gt;</code> bölümüne izleme kodunu ekleyin.
+        </p>
+        <div className="mt-4">
+          <GoogleTagForm googleTagId={googleTag?.id ?? ""} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">
+          Ürün / Kategori Kaynağı
+        </h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Ürün ve kategori verileri aşağıdaki XML adresinden çekilir. Adresi
+          değiştirmek için sunucudaki <code>PRODUCT_XML_URL</code> ortam
+          değişkenini güncelleyin.
+        </p>
+        <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-700">
+          {productXmlUrl}
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Fiyat Kaynağı</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Fiyat XML/API adresi henüz sağlanmadı. Adres girildikten sonra fiyat
+          güncelleme altyapısı (eşleme adaptörü) devreye alınacak.
+        </p>
+        <div className="mt-4">
+          <SettingsForm priceXmlUrl={priceXmlUrl} />
+        </div>
+        <div className="mt-5 border-t border-zinc-100 pt-4">
+          <SyncPricesButton />
+          <p className="mt-2 text-xs text-zinc-500">
+            Aktif {variantPrices.total} varyantın {variantPrices.priced ?? 0}
+            &apos;inde fiyat tanımlı.
+          </p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">KDV Oranı</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Sepette ara toplam, ürünlerin KDV hariç fiyatlarının toplamıdır.
+          Burada seçilen oran ara toplama eklenerek KDV tutarı ve KDV dahil
+          toplam hesaplanır.
+        </p>
+        <div className="mt-4">
+          <VatRateForm vatRate={vatRate} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <h3 className="text-base font-bold text-zinc-900">Mail Ayarları</h3>
+        <p className="mt-1 text-sm leading-6 text-zinc-500">
+          Sipariş teklifi oluşturulduğunda sipariş formu, aşağıda tanımlanan
+          alıcı adreslerine bu SMTP hesabından gönderilir.
+        </p>
+        <div className="mt-4">
+          <MailSettingsForm settings={mailSettings} />
+        </div>
+      </section>
+    </div>
+  );
+}

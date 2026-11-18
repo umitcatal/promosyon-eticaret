@@ -7,7 +7,7 @@ import {
   GOOGLE_TAG_SETTING_KEY,
   parseGoogleTagId,
 } from "@/lib/analytics";
-import { db, getSetting, setSetting } from "@/lib/db";
+import { db, setSetting } from "@/lib/db";
 import { CATALOG_SETTING_KEY, isCatalogExternalUrl, type CatalogSettings } from "@/lib/catalog";
 import { readCatalogSettings } from "@/lib/catalog-settings";
 import { CatalogUploadError, deleteCatalogFile, finishCatalogUpload } from "@/lib/catalog-uploads";
@@ -33,6 +33,9 @@ import {
   QUOTE_PHONE_SETTING_KEY,
 } from "@/lib/quote-contact";
 import { syncCatalog } from "@/lib/sync";
+import { siteTag } from "@/lib/cache-tags";
+import { getAdminSiteId } from "@/lib/site-request";
+import { getSiteIdentity, getSiteSetting, setSiteSetting } from "@/lib/site-settings";
 import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
   formatWhatsAppNumber,
@@ -470,6 +473,7 @@ export async function saveSliderAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const id = Number(formData.get("sliderId") ?? 0);
   const title = String(formData.get("title") ?? "").trim() || null;
@@ -481,8 +485,12 @@ export async function saveSliderAction(
     const existing =
       id > 0
         ? (db
-            .prepare("SELECT image_url, active FROM slider WHERE id = ?")
-            .get(id) as { image_url: string; active: number } | undefined)
+            .prepare(
+              "SELECT image_url, active FROM slider WHERE site_id = ? AND id = ?"
+            )
+            .get(siteId, id) as
+            | { image_url: string; active: number }
+            | undefined)
         : undefined;
     if (id > 0 && !existing) {
       return { error: "Slider bulunamadı." };
@@ -506,16 +514,18 @@ export async function saveSliderAction(
     if (id > 0) {
       db.prepare(
         `UPDATE slider SET image_url = ?, title = ?, subtitle = ?, link = ?, active = ?
-         WHERE id = ?`
-      ).run(imageUrl, title, subtitle, link, active, id);
+         WHERE id = ? AND site_id = ?`
+      ).run(imageUrl, title, subtitle, link, active, id, siteId);
     } else {
       const { next } = db
-        .prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM slider")
-        .get() as { next: number };
+        .prepare(
+          "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM slider WHERE site_id = ?"
+        )
+        .get(siteId) as { next: number };
       db.prepare(
-        `INSERT INTO slider (image_url, title, subtitle, link, sort_order, active)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(imageUrl, title, subtitle, link, next, active);
+        `INSERT INTO slider (site_id, image_url, title, subtitle, link, sort_order, active)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(siteId, imageUrl, title, subtitle, link, next, active);
     }
 
     if (existing && hasNewImage && existing.image_url !== imageUrl) {
@@ -523,6 +533,7 @@ export async function saveSliderAction(
     }
 
     updateTag("slider");
+    updateTag(siteTag(siteId, "slider"));
     return {
       ok: true,
       message: id > 0 ? "Slider güncellendi." : "Slider eklendi.",
@@ -538,16 +549,18 @@ export async function toggleSliderActiveAction(
   active: boolean
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (!Number.isInteger(sliderId) || sliderId <= 0) return;
-  db.prepare("UPDATE slider SET active = ? WHERE id = ?").run(
-    active ? 1 : 0,
-    sliderId
-  );
+  db.prepare(
+    "UPDATE slider SET active = ? WHERE id = ? AND site_id = ?"
+  ).run(active ? 1 : 0, sliderId, siteId);
   updateTag("slider");
+  updateTag(siteTag(siteId, "slider"));
 }
 
 export async function reorderSlidesAction(sliderIds: number[]): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (
     !Array.isArray(sliderIds) ||
     sliderIds.length === 0 ||
@@ -557,38 +570,45 @@ export async function reorderSlidesAction(sliderIds: number[]): Promise<void> {
     return;
   }
 
-  const update = db.prepare("UPDATE slider SET sort_order = ? WHERE id = ?");
+  const update = db.prepare(
+    "UPDATE slider SET sort_order = ? WHERE id = ? AND site_id = ?"
+  );
   db.transaction(() => {
-    sliderIds.forEach((id, index) => update.run(index, id));
+    sliderIds.forEach((id, index) => update.run(index, id, siteId));
   })();
   updateTag("slider");
+  updateTag(siteTag(siteId, "slider"));
 }
 
 export async function deleteSliderAction(formData: FormData): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const id = Number(formData.get("sliderId"));
   if (!Number.isInteger(id) || id <= 0) return;
 
   const row = db
-    .prepare("SELECT image_url FROM slider WHERE id = ?")
-    .get(id) as { image_url: string } | undefined;
-  db.prepare("DELETE FROM slider WHERE id = ?").run(id);
-  if (row) await deleteSliderImage(row.image_url);
+    .prepare("SELECT image_url FROM slider WHERE site_id = ? AND id = ?")
+    .get(siteId, id) as { image_url: string } | undefined;
+  if (!row) return;
+  db.prepare("DELETE FROM slider WHERE site_id = ? AND id = ?").run(siteId, id);
+  await deleteSliderImage(row.image_url);
   updateTag("slider");
+  updateTag(siteTag(siteId, "slider"));
 }
 
 export async function updateOrderStatusAction(
   formData: FormData
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const orderId = Number(formData.get("orderId"));
   const status = String(formData.get("status") ?? "");
   if (!Number.isInteger(orderId) || orderId <= 0) return;
   if (!ORDER_STATUSES.some((option) => option.value === status)) return;
 
   db.prepare(
-    "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(status, orderId);
+    "UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ? AND site_id = ?"
+  ).run(status, orderId, siteId);
   refresh();
 }
 
@@ -635,11 +655,13 @@ export async function saveGoogleTagAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const raw = String(formData.get("googleTagId") ?? "").trim();
 
   if (!raw) {
-    setSetting(GOOGLE_TAG_SETTING_KEY, "");
+    setSiteSetting(siteId, GOOGLE_TAG_SETTING_KEY, "");
     updateTag("settings");
+    updateTag(siteTag(siteId, "settings"));
     return { ok: true, message: "Google Analytics etiketi kaldırıldı." };
   }
 
@@ -651,8 +673,9 @@ export async function saveGoogleTagAction(
     };
   }
 
-  setSetting(GOOGLE_TAG_SETTING_KEY, tag.id);
+  setSiteSetting(siteId, GOOGLE_TAG_SETTING_KEY, tag.id);
   updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
   return { ok: true, message: `${tag.id} kaydedildi.` };
 }
 
@@ -661,6 +684,7 @@ export async function saveWhatsAppSettingsAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const rawNumber = String(formData.get("whatsappNumber") ?? "").trim();
   const title = String(formData.get("whatsappTitle") ?? "").trim();
@@ -687,11 +711,12 @@ export async function saveWhatsAppSettingsAction(
     return { error: "Karşılama mesajı en fazla 1000 karakter olabilir." };
   }
 
-  setSetting(WHATSAPP_NUMBER_SETTING_KEY, number ?? "");
-  setSetting(WHATSAPP_TITLE_SETTING_KEY, title);
-  setSetting(WHATSAPP_WELCOME_SETTING_KEY, welcome);
-  setSetting(WHATSAPP_ENABLED_SETTING_KEY, enabled ? "1" : "0");
+  setSiteSetting(siteId, WHATSAPP_NUMBER_SETTING_KEY, number ?? "");
+  setSiteSetting(siteId, WHATSAPP_TITLE_SETTING_KEY, title);
+  setSiteSetting(siteId, WHATSAPP_WELCOME_SETTING_KEY, welcome);
+  setSiteSetting(siteId, WHATSAPP_ENABLED_SETTING_KEY, enabled ? "1" : "0");
   updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
 
   if (!enabled) {
     return {
@@ -722,6 +747,7 @@ export async function saveQuoteContactAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const rawPhone = String(formData.get("quotePhone") ?? "").trim();
   const rawEmail = String(formData.get("quoteEmail") ?? "").trim();
@@ -741,10 +767,11 @@ export async function saveQuoteContactAction(
     return { error: "Açık adres en fazla 500 karakter olabilir." };
   }
 
-  setSetting(QUOTE_PHONE_SETTING_KEY, phone ?? "");
-  setSetting(QUOTE_EMAIL_SETTING_KEY, rawEmail);
-  setSetting(CONTACT_ADDRESS_SETTING_KEY, rawAddress);
+  setSiteSetting(siteId, QUOTE_PHONE_SETTING_KEY, phone ?? "");
+  setSiteSetting(siteId, QUOTE_EMAIL_SETTING_KEY, rawEmail);
+  setSiteSetting(siteId, CONTACT_ADDRESS_SETTING_KEY, rawAddress);
   updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
 
   return {
     ok: true,
@@ -757,7 +784,8 @@ export async function saveCatalogSettingsAction(
   formData: FormData
 ): Promise<AdminActionState & { settings?: CatalogSettings }> {
   const user = await requireAdmin();
-  const current = readCatalogSettings();
+  const siteId = await getAdminSiteId();
+  const current = readCatalogSettings(siteId);
   const label = String(formData.get("label") ?? "").trim();
   const source = String(formData.get("source") ?? "");
   const url = String(formData.get("url") ?? "").trim();
@@ -787,8 +815,9 @@ export async function saveCatalogSettingsAction(
     enabled, label, source, url, ...file,
     openInNewTab: formData.get("openInNewTab") === "on",
   };
-  setSetting(CATALOG_SETTING_KEY, JSON.stringify(settings));
+  setSiteSetting(siteId, CATALOG_SETTING_KEY, JSON.stringify(settings));
   updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
   if (current.fileUrl && current.fileUrl !== settings.fileUrl) {
     await deleteCatalogFile(current.fileUrl);
   }
@@ -800,7 +829,8 @@ export async function saveLogoAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
-  const current = getSetting("logo_url");
+  const siteId = await getAdminSiteId();
+  const current = getSiteSetting(siteId, "logo_url");
   const file = formData.get("logo");
 
   if (!(file instanceof File) || file.size === 0) {
@@ -809,9 +839,10 @@ export async function saveLogoAction(
 
   try {
     const newImage = await saveLogoImage(file);
-    setSetting("logo_url", newImage);
+    setSiteSetting(siteId, "logo_url", newImage);
     if (current && current !== newImage) await deleteLogoImage(current);
     updateTag("settings");
+    updateTag(siteTag(siteId, "settings"));
     return { ok: true, message: "Logo güncellendi.", nonce: crypto.randomUUID() };
   } catch (error) {
     return { error: (error as Error).message };
@@ -821,10 +852,12 @@ export async function saveLogoAction(
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function removeLogoAction(_formData: FormData): Promise<void> {
   await requireAdmin();
-  const current = getSetting("logo_url");
-  setSetting("logo_url", "");
+  const siteId = await getAdminSiteId();
+  const current = getSiteSetting(siteId, "logo_url");
+  setSiteSetting(siteId, "logo_url", "");
   if (current) await deleteLogoImage(current);
   updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
 }
 
 export async function syncPricesAction(): Promise<AdminActionState> {
@@ -847,6 +880,8 @@ export async function saveMailSettingsAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
+  const identity = getSiteIdentity(siteId);
 
   const seen = new Set<string>();
   const recipients: string[] = [];
@@ -873,7 +908,7 @@ export async function saveMailSettingsAction(
   const user = String(formData.get("user") ?? "").trim();
   const pass = String(formData.get("pass") ?? "").trim();
   const fromName =
-    String(formData.get("fromName") ?? "").trim() || "Kurumsal Promo";
+    String(formData.get("fromName") ?? "").trim() || identity.siteName;
   const parsedFromAddress = z
     .email()
     .safeParse(String(formData.get("fromAddress") ?? "").trim());
@@ -887,7 +922,7 @@ export async function saveMailSettingsAction(
     return { error: "Geçerli bir gönderici e-posta adresi girin." };
   }
 
-  const effectivePass = pass || getMailSettings()?.pass || "";
+  const effectivePass = pass || getMailSettings(siteId)?.pass || "";
   if (!effectivePass) return { error: "SMTP şifresi gerekli." };
 
   const settings: MailSettings = {
@@ -900,7 +935,7 @@ export async function saveMailSettingsAction(
     fromAddress: parsedFromAddress.data,
     recipients: parsedRecipients.data,
   };
-  setSetting(MAIL_SETTINGS_KEY, JSON.stringify(settings));
+  setSiteSetting(siteId, MAIL_SETTINGS_KEY, JSON.stringify(settings));
   return { ok: true, message: "Mail ayarları kaydedildi." };
 }
 
@@ -909,7 +944,8 @@ export async function sendTestMailAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
-  const settings = getMailSettings();
+  const siteId = await getAdminSiteId();
+  const settings = getMailSettings(siteId);
   if (!settings) return { error: "Önce mail ayarlarını kaydedin." };
 
   const testTo = String(formData.get("testTo") ?? "").trim();
@@ -929,7 +965,7 @@ export async function sendTestMailAction(
   }
 
   try {
-    await sendTestMail(targets.join(", "));
+    await sendTestMail(targets.join(", "), siteId);
     return { ok: true, message: `Test maili gönderildi: ${targets.join(", ")}` };
   } catch (error) {
     return {

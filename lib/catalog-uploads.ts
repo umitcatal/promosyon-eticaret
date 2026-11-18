@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, open, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { CATALOG_CHUNK_BYTES, MAX_CATALOG_BYTES } from "./catalog";
+import { isAssetReferenced } from "./asset-refs";
 import { UPLOAD_ROOT } from "./uploads";
 
 const TEMP_ROOT = path.join(process.cwd(), /* turbopackIgnore: true */ "data", "catalog-uploads");
@@ -120,6 +121,7 @@ export async function discardCatalogUpload(id: string, userId: number) {
 export async function deleteCatalogFile(url: string) {
   const id = url.replace(/^\/uploads\/catalogs\//, "").replace(/\.pdf$/, "");
   if (url !== `/uploads/catalogs/${id}.pdf` || !UPLOAD_ID.test(id)) return;
+  if (isAssetReferenced(url)) return;
   await unlink(path.join(CATALOG_ROOT, `${id}.pdf`)).catch((error: NodeJS.ErrnoException) => {
     if (error.code !== "ENOENT") console.error("Eski katalog dosyası silinemedi.", error.code);
   });

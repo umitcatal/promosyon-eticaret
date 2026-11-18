@@ -64,6 +64,83 @@
   --font-display: var(--font-fraunces);
 }
 
+/*
+ * Theme presets only swap brand/brass accents; neutrals stay shared so every
+ * site keeps the same paper/ink foundation. Attribute-only selectors let the
+ * admin theme preview apply a preset to a nested element as well as <html>.
+ */
+[data-theme="1"] {
+  --color-brand-50: #edf2ef;
+  --color-brand-100: #d7e3db;
+  --color-brand-200: #b4cbbe;
+  --color-brand-300: #7fa98f;
+  --color-brand-400: #457d64;
+  --color-brand-500: #256a4e;
+  --color-brand-600: #17513e;
+  --color-brand-700: #0f3f30;
+  --color-brand-800: #0b3126;
+  --color-brand-900: #072019;
+
+  --color-brass-50: #fbf3e2;
+  --color-brass-100: #f5e7c6;
+  --color-brass-200: #e6c88a;
+  --color-brass-300: #d9b45b;
+  --color-brass-400: #c39b3e;
+  --color-brass-500: #b08123;
+  --color-brass-600: #97691d;
+  --color-brass-700: #7c5410;
+  --color-brass-800: #5e3f0c;
+  --color-brass-900: #42290a;
+
+  --color-orange-50: #edf2ef;
+  --color-orange-100: #d7e3db;
+  --color-orange-200: #b4cbbe;
+  --color-orange-300: #7fa98f;
+  --color-orange-400: #457d64;
+  --color-orange-500: #256a4e;
+  --color-orange-600: #17513e;
+  --color-orange-700: #0f3f30;
+  --color-orange-800: #0b3126;
+  --color-orange-900: #072019;
+  --color-orange-950: #041209;
+}
+
+[data-theme="2"] {
+  --color-brand-50: #eef3f8;
+  --color-brand-100: #dbe6f1;
+  --color-brand-200: #b9cee3;
+  --color-brand-300: #8aaccc;
+  --color-brand-400: #5a83ab;
+  --color-brand-500: #3c648c;
+  --color-brand-600: #2c4e70;
+  --color-brand-700: #223d59;
+  --color-brand-800: #1d2836;
+  --color-brand-900: #151e29;
+
+  --color-brass-50: #fbf1ec;
+  --color-brass-100: #f6e1d5;
+  --color-brass-200: #ecc2a8;
+  --color-brass-300: #dd9d76;
+  --color-brass-400: #cc7d50;
+  --color-brass-500: #b96538;
+  --color-brass-600: #a2502b;
+  --color-brass-700: #853f22;
+  --color-brass-800: #6b331e;
+  --color-brass-900: #56291a;
+
+  --color-orange-50: #eef3f8;
+  --color-orange-100: #dbe6f1;
+  --color-orange-200: #b9cee3;
+  --color-orange-300: #8aaccc;
+  --color-orange-400: #5a83ab;
+  --color-orange-500: #3c648c;
+  --color-orange-600: #2c4e70;
+  --color-orange-700: #223d59;
+  --color-orange-800: #1d2836;
+  --color-orange-900: #151e29;
+  --color-orange-950: #0e151d;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -187,7 +264,7 @@ body {
 }
 
 .rich-text a {
-  color: #17513e;
+  color: var(--color-brand-600);
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -200,7 +277,7 @@ body {
 
 .rich-text blockquote {
   background: #f3efe6;
-  border-left: 3px solid #d9b45b;
+  border-left: 3px solid var(--color-brass-300);
   color: #4b4a42;
   font-family: var(--font-fraunces), Georgia, serif;
   font-style: italic;
@@ -244,7 +321,7 @@ body {
 }
 
 .rich-text mark {
-  background: #f5e7c6;
+  background: var(--color-brass-100);
   border-radius: 2px;
   padding: 0 0.15em;
 }

@@ -1,4 +1,4 @@
-import { getSetting } from "./db";
+import { getSiteSetting } from "./site-settings";
 import {
   DEFAULT_WHATSAPP_TITLE,
   DEFAULT_WHATSAPP_WELCOME,
@@ -10,18 +10,19 @@ import {
   type WhatsAppSupport,
 } from "./whatsapp";
 
-export function readWhatsAppSupport(): WhatsAppSupport {
+export function readWhatsAppSupport(siteId: number): WhatsAppSupport {
   const number = normalizeWhatsAppNumber(
-    getSetting(WHATSAPP_NUMBER_SETTING_KEY) ?? ""
+    getSiteSetting(siteId, WHATSAPP_NUMBER_SETTING_KEY) ?? ""
   );
   const welcomeMessage =
-    getSetting(WHATSAPP_WELCOME_SETTING_KEY)?.trim() ||
+    getSiteSetting(siteId, WHATSAPP_WELCOME_SETTING_KEY)?.trim() ||
     DEFAULT_WHATSAPP_WELCOME;
   const title =
-    getSetting(WHATSAPP_TITLE_SETTING_KEY)?.trim() || DEFAULT_WHATSAPP_TITLE;
+    getSiteSetting(siteId, WHATSAPP_TITLE_SETTING_KEY)?.trim() ||
+    DEFAULT_WHATSAPP_TITLE;
 
   return {
-    enabled: getSetting(WHATSAPP_ENABLED_SETTING_KEY) !== "0",
+    enabled: getSiteSetting(siteId, WHATSAPP_ENABLED_SETTING_KEY) !== "0",
     number: number ?? "",
     title,
     welcomeMessage,

@@ -1,4 +1,4 @@
-import { getSetting } from "./db";
+import { getSiteSetting } from "./site-settings";
 import { getMailSettings } from "./mail";
 import {
   formatPhoneNumber,
@@ -24,31 +24,34 @@ export type SiteContact = {
   address: string | null;
 };
 
-export function readQuoteContactSettings(): QuoteContactSettings {
+export function readQuoteContactSettings(
+  siteId: number
+): QuoteContactSettings {
   return {
-    phone: getSetting(QUOTE_PHONE_SETTING_KEY)?.trim() ?? "",
-    email: getSetting(QUOTE_EMAIL_SETTING_KEY)?.trim() ?? "",
-    address: getSetting(CONTACT_ADDRESS_SETTING_KEY)?.trim() ?? "",
+    phone: getSiteSetting(siteId, QUOTE_PHONE_SETTING_KEY)?.trim() ?? "",
+    email: getSiteSetting(siteId, QUOTE_EMAIL_SETTING_KEY)?.trim() ?? "",
+    address: getSiteSetting(siteId, CONTACT_ADDRESS_SETTING_KEY)?.trim() ?? "",
   };
 }
 
-export function readQuoteContact(): QuoteContact {
-  const settings = readQuoteContactSettings();
+export function readQuoteContact(siteId: number): QuoteContact {
+  const settings = readQuoteContactSettings(siteId);
   const phone = normalizePhoneNumber(
-    settings.phone || (getSetting(WHATSAPP_NUMBER_SETTING_KEY) ?? "")
+    settings.phone || (getSiteSetting(siteId, WHATSAPP_NUMBER_SETTING_KEY) ?? "")
   );
-  const email = settings.email || getMailSettings()?.recipients[0] || null;
+  const email = settings.email || getMailSettings(siteId)?.recipients[0] || null;
 
   return { phone, email };
 }
 
-export function readSiteContact(): SiteContact {
-  const { phone, email } = readQuoteContact();
+export function readSiteContact(siteId: number): SiteContact {
+  const { phone, email } = readQuoteContact(siteId);
 
   return {
     phone,
     phoneDisplay: phone ? formatPhoneNumber(phone) : null,
     email,
-    address: getSetting(CONTACT_ADDRESS_SETTING_KEY)?.trim() || null,
+    address:
+      getSiteSetting(siteId, CONTACT_ADDRESS_SETTING_KEY)?.trim() || null,
   };
 }

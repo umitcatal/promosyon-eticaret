@@ -1,4 +1,4 @@
-import { getSetting } from "./db";
+import { getSiteSetting } from "./site-settings";
 
 export const GOOGLE_TAG_SETTING_KEY = "google_tag_id";
 
@@ -27,6 +27,6 @@ export function parseGoogleTagId(raw: string | null): GoogleTagId | null {
   return null;
 }
 
-export function getGoogleTagIdSetting(): GoogleTagId | null {
-  return parseGoogleTagId(getSetting(GOOGLE_TAG_SETTING_KEY));
+export function getGoogleTagIdSetting(siteId: number): GoogleTagId | null {
+  return parseGoogleTagId(getSiteSetting(siteId, GOOGLE_TAG_SETTING_KEY));
 }

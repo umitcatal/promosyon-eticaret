@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
-import { SITE_BASE } from "@/lib/seo";
+import { getRequestSiteId } from "@/lib/site-request";
+import { getSiteBaseUrl, parseSiteId } from "@/lib/sites";
 import { startSession } from "@/lib/session";
 import { safeNextPath } from "@/lib/url";
 import {
@@ -31,10 +32,15 @@ function fail(base: string, reason: string) {
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
-  const base = redirectUri ?? SITE_BASE;
 
-  if (!clientId || !clientSecret || !redirectUri) {
+  const cookieStore = await cookies();
+  const siteId =
+    parseSiteId(cookieStore.get("google_oauth_site")?.value) ??
+    (await getRequestSiteId());
+  const base = getSiteBaseUrl(siteId);
+  const redirectUri = `${base}/api/auth/callback/google`;
+
+  if (!clientId || !clientSecret) {
     return fail(base, "google");
   }
 
@@ -42,13 +48,13 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
 
-  const cookieStore = await cookies();
   const expectedState = cookieStore.get("google_oauth_state")?.value;
   const codeVerifier = cookieStore.get("google_oauth_verifier")?.value;
   const next = cookieStore.get("google_oauth_next")?.value;
 
   cookieStore.delete("google_oauth_state");
   cookieStore.delete("google_oauth_verifier");
+  cookieStore.delete("google_oauth_site");
   cookieStore.delete("google_oauth_next");
 
   if (!code || !state || !expectedState || state !== expectedState || !codeVerifier) {

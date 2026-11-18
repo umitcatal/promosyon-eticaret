@@ -3,7 +3,9 @@
 import { updateTag } from "next/cache";
 import type { AdminActionState } from "@/app/actions/admin";
 import { requireAdmin } from "@/lib/auth";
+import { siteTag } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
+import { getAdminSiteId } from "@/lib/site-request";
 import {
   clampItemLimit,
   DEFAULT_PROCESS_STEPS,
@@ -74,9 +76,11 @@ function readCarouselStyle(
   return normalizeCarouselStyle(carouselStyleFields(formData));
 }
 
-function collectionExists(collectionId: number): boolean {
+function collectionExists(siteId: number, collectionId: number): boolean {
   return Boolean(
-    db.prepare("SELECT id FROM collections WHERE id = ?").get(collectionId)
+    db
+      .prepare("SELECT id FROM collections WHERE site_id = ? AND id = ?")
+      .get(siteId, collectionId)
   );
 }
 
@@ -85,6 +89,7 @@ export async function createHomeWidgetAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const rawType = String(formData.get("type") ?? "");
   if (!isHomeWidgetType(rawType)) {
@@ -107,7 +112,7 @@ export async function createHomeWidgetAction(
   if (type === "collection") {
     collectionConfig = readCollectionConfig(formData);
     if (!collectionConfig) return { error: "Koleksiyon seçin." };
-    if (!collectionExists(collectionConfig.collectionId)) {
+    if (!collectionExists(siteId, collectionConfig.collectionId)) {
       return { error: "Koleksiyon bulunamadı." };
     }
   }
@@ -135,15 +140,16 @@ export async function createHomeWidgetAction(
     db.transaction(() => {
       const { next } = db
         .prepare(
-          "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets"
+          "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets WHERE site_id = ?"
         )
-        .get() as { next: number };
+        .get(siteId) as { next: number };
 
       db.prepare(
         `INSERT INTO home_widgets
-           (type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, banner_width, item_limit, config, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           (site_id, type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, banner_width, item_limit, config, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).run(
+        siteId,
         type,
         meta.defaults.eyebrow,
         meta.defaults.title,
@@ -163,6 +169,7 @@ export async function createHomeWidgetAction(
   }
 
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
   return {
     ok: true,
     message: `${meta.label} eklendi.`,
@@ -175,6 +182,7 @@ export async function updateHomeWidgetAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const widgetId = Number(formData.get("widgetId"));
   if (!Number.isInteger(widgetId) || widgetId <= 0) {
@@ -182,8 +190,8 @@ export async function updateHomeWidgetAction(
   }
 
   const existing = db
-    .prepare("SELECT * FROM home_widgets WHERE id = ?")
-    .get(widgetId) as HomeWidgetRow | undefined;
+    .prepare("SELECT * FROM home_widgets WHERE site_id = ? AND id = ?")
+    .get(siteId, widgetId) as HomeWidgetRow | undefined;
   if (!existing || !isHomeWidgetType(existing.type)) {
     return { error: "Widget bulunamadı." };
   }
@@ -231,7 +239,7 @@ export async function updateHomeWidgetAction(
   if (type === "collection") {
     collectionConfig = readCollectionConfig(formData);
     if (!collectionConfig) return { error: "Koleksiyon seçin." };
-    if (!collectionExists(collectionConfig.collectionId)) {
+    if (!collectionExists(siteId, collectionConfig.collectionId)) {
       return { error: "Koleksiyon bulunamadı." };
     }
   }
@@ -299,7 +307,7 @@ export async function updateHomeWidgetAction(
        SET eyebrow = ?, title = ?, subtitle = ?, link = ?, link_label = ?,
            banner_layout = ?, aspect = ?, banner_width = ?, item_limit = ?,
            config = ?, updated_at = datetime('now')
-       WHERE id = ?`
+       WHERE id = ? AND site_id = ?`
     ).run(
       eyebrow,
       title,
@@ -311,13 +319,15 @@ export async function updateHomeWidgetAction(
       bannerWidth,
       itemLimit,
       config,
-      widgetId
+      widgetId,
+      siteId
     );
   } catch (error) {
     return { error: (error as Error).message };
   }
 
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
   return {
     ok: true,
     message: "Widget güncellendi.",
@@ -330,18 +340,21 @@ export async function toggleHomeWidgetActiveAction(
   active: boolean
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (!Number.isInteger(widgetId) || widgetId <= 0) return;
 
   db.prepare(
-    "UPDATE home_widgets SET active = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(active ? 1 : 0, widgetId);
+    "UPDATE home_widgets SET active = ?, updated_at = datetime('now') WHERE id = ? AND site_id = ?"
+  ).run(active ? 1 : 0, widgetId, siteId);
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
 }
 
 export async function reorderHomeWidgetsAction(
   widgetIds: number[]
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (
     !Array.isArray(widgetIds) ||
     widgetIds.length === 0 ||
@@ -352,28 +365,39 @@ export async function reorderHomeWidgetsAction(
   }
 
   const update = db.prepare(
-    "UPDATE home_widgets SET sort_order = ? WHERE id = ?"
+    "UPDATE home_widgets SET sort_order = ? WHERE id = ? AND site_id = ?"
   );
   db.transaction(() => {
-    widgetIds.forEach((id, index) => update.run(index, id));
+    widgetIds.forEach((id, index) => update.run(index, id, siteId));
   })();
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
 }
 
 export async function deleteHomeWidgetAction(formData: FormData): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const widgetId = Number(formData.get("widgetId"));
   if (!Number.isInteger(widgetId) || widgetId <= 0) return;
+
+  const widget = db
+    .prepare("SELECT id FROM home_widgets WHERE site_id = ? AND id = ?")
+    .get(siteId, widgetId) as { id: number } | undefined;
+  if (!widget) return;
 
   const banners = db
     .prepare("SELECT image_url FROM home_widget_banners WHERE widget_id = ?")
     .all(widgetId) as { image_url: string }[];
 
-  db.prepare("DELETE FROM home_widgets WHERE id = ?").run(widgetId);
+  db.prepare("DELETE FROM home_widgets WHERE site_id = ? AND id = ?").run(
+    siteId,
+    widgetId
+  );
   await Promise.all(
     banners.map((banner) => deleteHomeBannerImage(banner.image_url))
   );
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
 }
 
 export async function saveHomeBannerAction(
@@ -381,6 +405,7 @@ export async function saveHomeBannerAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const widgetId = Number(formData.get("widgetId"));
   const bannerId = Number(formData.get("bannerId") ?? 0);
@@ -392,8 +417,10 @@ export async function saveHomeBannerAction(
   }
 
   const widget = db
-    .prepare("SELECT id, type, banner_layout FROM home_widgets WHERE id = ?")
-    .get(widgetId) as
+    .prepare(
+      "SELECT id, type, banner_layout FROM home_widgets WHERE site_id = ? AND id = ?"
+    )
+    .get(siteId, widgetId) as
     | { id: number; type: string; banner_layout: number }
     | undefined;
   if (!widget || widget.type !== "banner") {
@@ -483,6 +510,7 @@ export async function saveHomeBannerAction(
   }
 
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
   return {
     ok: true,
     message: existing ? "Banner güncellendi." : "Banner eklendi.",
@@ -494,15 +522,22 @@ export async function deleteHomeBannerAction(
   formData: FormData
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const bannerId = Number(formData.get("bannerId"));
   if (!Number.isInteger(bannerId) || bannerId <= 0) return;
 
   const row = db
-    .prepare("SELECT image_url FROM home_widget_banners WHERE id = ?")
-    .get(bannerId) as { image_url: string } | undefined;
+    .prepare(
+      `SELECT b.image_url FROM home_widget_banners b
+       JOIN home_widgets w ON w.id = b.widget_id
+       WHERE w.site_id = ? AND b.id = ?`
+    )
+    .get(siteId, bannerId) as { image_url: string } | undefined;
+  if (!row) return;
   db.prepare("DELETE FROM home_widget_banners WHERE id = ?").run(bannerId);
-  if (row) await deleteHomeBannerImage(row.image_url);
+  await deleteHomeBannerImage(row.image_url);
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
 }
 
 export async function reorderHomeBannersAction(
@@ -510,6 +545,7 @@ export async function reorderHomeBannersAction(
   bannerIds: number[]
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (!Number.isInteger(widgetId) || widgetId <= 0) return;
   if (
     !Array.isArray(bannerIds) ||
@@ -519,6 +555,11 @@ export async function reorderHomeBannersAction(
   ) {
     return;
   }
+
+  const widget = db
+    .prepare("SELECT id FROM home_widgets WHERE site_id = ? AND id = ?")
+    .get(siteId, widgetId) as { id: number } | undefined;
+  if (!widget) return;
 
   const owned = new Set(
     (
@@ -536,4 +577,5 @@ export async function reorderHomeBannersAction(
     bannerIds.forEach((id, index) => update.run(index, id));
   })();
   updateTag("homepage");
+  updateTag(siteTag(siteId, "homepage"));
 }

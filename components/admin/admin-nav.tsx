@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin/sayfalar", label: "Sayfalar" },
   { href: "/admin/siparisler", label: "Siparişler" },
   { href: "/admin/uyeler", label: "Üyeler" },
+  { href: "/admin/tema", label: "Tema" },
   { href: "/admin/ayarlar", label: "Ayarlar" },
 ];
 

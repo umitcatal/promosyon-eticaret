@@ -4,7 +4,9 @@ import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import type { AdminActionState } from "@/app/actions/admin";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
+import { siteTag } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
+import { getAdminSiteId } from "@/lib/site-request";
 import { sanitizeRichText } from "@/lib/sanitize";
 import { slugify } from "@/lib/slug";
 import { saveContentImage } from "@/lib/uploads";
@@ -41,6 +43,7 @@ export async function savePageAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const id = Number(formData.get("pageId") ?? 0);
   const title = String(formData.get("title") ?? "").trim();
@@ -66,28 +69,28 @@ export async function savePageAction(
   }
 
   const duplicate = db
-    .prepare("SELECT id FROM pages WHERE slug = ? AND id != ?")
-    .get(slug, id > 0 ? id : 0) as { id: number } | undefined;
+    .prepare("SELECT id FROM pages WHERE site_id = ? AND slug = ? AND id != ?")
+    .get(siteId, slug, id > 0 ? id : 0) as { id: number } | undefined;
   if (duplicate) return { error: "Bu adres başka bir sayfada kullanılıyor." };
 
   try {
     if (id > 0) {
       const existing = db
-        .prepare("SELECT id FROM pages WHERE id = ?")
-        .get(id) as { id: number } | undefined;
+        .prepare("SELECT id FROM pages WHERE site_id = ? AND id = ?")
+        .get(siteId, id) as { id: number } | undefined;
       if (!existing) return { error: "Sayfa bulunamadı." };
 
       db.prepare(
         `UPDATE pages
          SET slug = ?, title = ?, content = ?, meta_title = ?, meta_description = ?,
              active = ?, updated_at = datetime('now')
-         WHERE id = ?`
-      ).run(slug, title, content, metaTitle, metaDescription, active, id);
+         WHERE id = ? AND site_id = ?`
+      ).run(slug, title, content, metaTitle, metaDescription, active, id, siteId);
     } else {
       db.prepare(
-        `INSERT INTO pages (slug, title, content, meta_title, meta_description, active)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).run(slug, title, content, metaTitle, metaDescription, active);
+        `INSERT INTO pages (site_id, slug, title, content, meta_title, meta_description, active)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(siteId, slug, title, content, metaTitle, metaDescription, active);
     }
   } catch (error) {
     return { error: (error as Error).message };
@@ -95,6 +98,8 @@ export async function savePageAction(
 
   updateTag("pages");
   updateTag("menu");
+  updateTag(siteTag(siteId, "pages"));
+  updateTag(siteTag(siteId, "menu"));
   redirect(returnTo);
 }
 
@@ -120,12 +125,15 @@ export async function uploadEditorImageAction(
 
 export async function deletePageAction(formData: FormData): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const id = Number(formData.get("pageId"));
   if (!Number.isInteger(id) || id <= 0) return;
 
   const references = db
-    .prepare("SELECT COUNT(*) AS total FROM menu_items WHERE page_id = ?")
-    .get(id) as { total: number };
+    .prepare(
+      "SELECT COUNT(*) AS total FROM menu_items WHERE site_id = ? AND page_id = ?"
+    )
+    .get(siteId, id) as { total: number };
   if (references.total > 0) {
     redirect(
       `/admin/sayfalar?hata=${encodeURIComponent(
@@ -134,9 +142,11 @@ export async function deletePageAction(formData: FormData): Promise<void> {
     );
   }
 
-  db.prepare("DELETE FROM pages WHERE id = ?").run(id);
+  db.prepare("DELETE FROM pages WHERE site_id = ? AND id = ?").run(siteId, id);
   updateTag("pages");
   updateTag("menu");
+  updateTag(siteTag(siteId, "pages"));
+  updateTag(siteTag(siteId, "menu"));
   redirect("/admin/sayfalar?mesaj=" + encodeURIComponent("Sayfa silindi."));
 }
 
@@ -145,6 +155,7 @@ export async function saveMenuItemAction(
   formData: FormData
 ): Promise<AdminActionState> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
 
   const id = Number(formData.get("menuItemId") ?? 0);
   const label = String(formData.get("label") ?? "").trim();
@@ -173,8 +184,8 @@ export async function saveMenuItemAction(
       return { error: "Lütfen bir sayfa seçin." };
     }
     const page = db
-      .prepare("SELECT id, slug FROM pages WHERE id = ?")
-      .get(pageId) as { id: number; slug: string } | undefined;
+      .prepare("SELECT id, slug FROM pages WHERE site_id = ? AND id = ?")
+      .get(siteId, pageId) as { id: number; slug: string } | undefined;
     if (!page) return { error: "Seçilen sayfa bulunamadı." };
     linkedPageId = page.id;
     href = `/${page.slug}`;
@@ -183,14 +194,14 @@ export async function saveMenuItemAction(
   try {
     if (id > 0) {
       const existing = db
-        .prepare("SELECT id FROM menu_items WHERE id = ?")
-        .get(id) as { id: number } | undefined;
+        .prepare("SELECT id FROM menu_items WHERE site_id = ? AND id = ?")
+        .get(siteId, id) as { id: number } | undefined;
       if (!existing) return { error: "Menü öğesi bulunamadı." };
 
       db.prepare(
         `UPDATE menu_items
          SET label = ?, type = ?, href = ?, page_id = ?, open_in_new_tab = ?, active = ?
-         WHERE id = ?`
+         WHERE id = ? AND site_id = ?`
       ).run(
         label,
         type,
@@ -198,25 +209,27 @@ export async function saveMenuItemAction(
         linkedPageId,
         openInNewTab,
         active,
-        id
+        id,
+        siteId
       );
     } else {
       const { next } = db
         .prepare(
-          "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM menu_items"
+          "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM menu_items WHERE site_id = ?"
         )
-        .get() as { next: number };
+        .get(siteId) as { next: number };
       db.prepare(
         `INSERT INTO menu_items
-           (label, type, href, page_id, open_in_new_tab, sort_order, active)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(label, type, href, linkedPageId, openInNewTab, next, active);
+           (site_id, label, type, href, page_id, open_in_new_tab, sort_order, active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      ).run(siteId, label, type, href, linkedPageId, openInNewTab, next, active);
     }
   } catch (error) {
     return { error: (error as Error).message };
   }
 
   updateTag("menu");
+  updateTag(siteTag(siteId, "menu"));
   return {
     ok: true,
     message: id > 0 ? "Menü öğesi güncellendi." : "Menü öğesi eklendi.",
@@ -226,10 +239,15 @@ export async function saveMenuItemAction(
 
 export async function deleteMenuItemAction(formData: FormData): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   const id = Number(formData.get("menuItemId"));
   if (!Number.isInteger(id) || id <= 0) return;
-  db.prepare("DELETE FROM menu_items WHERE id = ?").run(id);
+  db.prepare("DELETE FROM menu_items WHERE site_id = ? AND id = ?").run(
+    siteId,
+    id
+  );
   updateTag("menu");
+  updateTag(siteTag(siteId, "menu"));
 }
 
 export async function toggleMenuItemActiveAction(
@@ -237,18 +255,20 @@ export async function toggleMenuItemActiveAction(
   active: boolean
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (!Number.isInteger(menuItemId) || menuItemId <= 0) return;
-  db.prepare("UPDATE menu_items SET active = ? WHERE id = ?").run(
-    active ? 1 : 0,
-    menuItemId
-  );
+  db.prepare(
+    "UPDATE menu_items SET active = ? WHERE id = ? AND site_id = ?"
+  ).run(active ? 1 : 0, menuItemId, siteId);
   updateTag("menu");
+  updateTag(siteTag(siteId, "menu"));
 }
 
 export async function reorderMenuItemsAction(
   menuItemIds: number[]
 ): Promise<void> {
   await requireAdmin();
+  const siteId = await getAdminSiteId();
   if (
     !Array.isArray(menuItemIds) ||
     menuItemIds.length === 0 ||
@@ -259,10 +279,11 @@ export async function reorderMenuItemsAction(
   }
 
   const update = db.prepare(
-    "UPDATE menu_items SET sort_order = ? WHERE id = ?"
+    "UPDATE menu_items SET sort_order = ? WHERE id = ? AND site_id = ?"
   );
   db.transaction(() => {
-    menuItemIds.forEach((id, index) => update.run(index, id));
+    menuItemIds.forEach((id, index) => update.run(index, id, siteId));
   })();
   updateTag("menu");
+  updateTag(siteTag(siteId, "menu"));
 }

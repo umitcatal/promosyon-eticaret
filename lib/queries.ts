@@ -12,6 +12,9 @@ import {
   parseHomeWidgetConfig,
 } from "./home-widgets";
 import { normalizeSearchQuery, toLikePattern } from "./search-fold";
+import { siteTag } from "./cache-tags";
+import { getCurrentSiteId } from "./site-context";
+import { getSiteSetting } from "./site-settings";
 import type {
   Category,
   CategoryNode,
@@ -305,18 +308,19 @@ export async function getCategorySidebarTree(): Promise<{
 
 export async function getMenuNavItems(): Promise<MenuNavItem[]> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("menu");
+  cacheTag("menu", siteTag(siteId, "menu"));
 
   const rows = db
     .prepare(
       `SELECT m.*, p.slug AS page_slug, p.active AS page_active
        FROM menu_items m
-       LEFT JOIN pages p ON p.id = m.page_id
-       WHERE m.active = 1
+       LEFT JOIN pages p ON p.id = m.page_id AND p.site_id = m.site_id
+       WHERE m.active = 1 AND m.site_id = ?
        ORDER BY m.sort_order, m.id`
     )
-    .all() as (MenuItem & {
+    .all(siteId) as (MenuItem & {
     page_slug: string | null;
     page_active: number | null;
   })[];
@@ -350,22 +354,28 @@ export async function getPublishedPageBySlug(
   slug: string
 ): Promise<Page | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("pages");
+  cacheTag("pages", siteTag(siteId, "pages"));
 
   const row = db
-    .prepare("SELECT * FROM pages WHERE slug = ? AND active = 1")
-    .get(slug) as Page | undefined;
+    .prepare(
+      "SELECT * FROM pages WHERE site_id = ? AND slug = ? AND active = 1"
+    )
+    .get(siteId, slug) as Page | undefined;
 
   return row ?? null;
 }
 
 export async function getMenuItemsCount(): Promise<number> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("menu");
+  cacheTag("menu", siteTag(siteId, "menu"));
 
-  const row = db.prepare("SELECT COUNT(*) AS total FROM menu_items").get() as {
+  const row = db
+    .prepare("SELECT COUNT(*) AS total FROM menu_items WHERE site_id = ?")
+    .get(siteId) as {
     total: number;
   };
 
@@ -374,51 +384,57 @@ export async function getMenuItemsCount(): Promise<number> {
 
 export async function getHeaderCatalog() {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  return readCatalogSettings();
+  return readCatalogSettings(siteId);
 }
 
 export async function getSiteLogoUrl(): Promise<string | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  const url = getSetting("logo_url");
+  const url = getSiteSetting(siteId, "logo_url");
   return url && url.trim() ? url.trim() : null;
 }
 
 export async function getGoogleTagId(): Promise<GoogleTagId | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  return getGoogleTagIdSetting();
+  return getGoogleTagIdSetting(siteId);
 }
 
 export async function getWhatsAppSupport(): Promise<WhatsAppSupport> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  return readWhatsAppSupport();
+  return readWhatsAppSupport(siteId);
 }
 
 export async function getQuoteContact(): Promise<QuoteContact> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  return readQuoteContact();
+  return readQuoteContact(siteId);
 }
 
 export async function getSiteContact(): Promise<SiteContact> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("settings");
+  cacheTag("settings", siteTag(siteId, "settings"));
 
-  return readSiteContact();
+  return readSiteContact(siteId);
 }
 
 export function getVatRate(): number {
@@ -814,27 +830,31 @@ export async function searchTypeahead(
 
 export async function getSliderItems(): Promise<SliderItem[]> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("slider");
+  cacheTag("slider", siteTag(siteId, "slider"));
 
   return db
     .prepare(
-      "SELECT * FROM slider WHERE active = 1 ORDER BY sort_order, id LIMIT 8"
+      "SELECT * FROM slider WHERE site_id = ? AND active = 1 ORDER BY sort_order, id LIMIT 8"
     )
-    .all() as SliderItem[];
+    .all(siteId) as SliderItem[];
 }
 
 export function fetchHomeWidgets(
+  siteId: number,
   options: { activeOnly?: boolean } = {}
 ): HomeWidgetWithBanners[] {
   const activeOnly = options.activeOnly ?? false;
 
   const rows = db
     .prepare(
-      `SELECT * FROM home_widgets${activeOnly ? " WHERE active = 1" : ""}
+      `SELECT * FROM home_widgets WHERE site_id = ?${
+        activeOnly ? " AND active = 1" : ""
+      }
        ORDER BY sort_order, id`
     )
-    .all() as HomeWidgetRow[];
+    .all(siteId) as HomeWidgetRow[];
 
   if (rows.length === 0) return [];
 
@@ -879,22 +899,26 @@ export function fetchHomeWidgets(
 
 export async function getHomeWidgets(): Promise<HomeWidgetWithBanners[]> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("homepage");
+  cacheTag("homepage", siteTag(siteId, "homepage"));
 
-  return fetchHomeWidgets({ activeOnly: true });
+  return fetchHomeWidgets(siteId, { activeOnly: true });
 }
 
 export async function getCollectionBySlug(
   slug: string
 ): Promise<Collection | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("collections", "catalog");
+  cacheTag("collections", "catalog", siteTag(siteId, "collections"));
 
   const row = db
-    .prepare("SELECT * FROM collections WHERE slug = ? AND active = 1")
-    .get(slug) as Collection | undefined;
+    .prepare(
+      "SELECT * FROM collections WHERE site_id = ? AND slug = ? AND active = 1"
+    )
+    .get(siteId, slug) as Collection | undefined;
   return row ?? null;
 }
 
@@ -909,12 +933,15 @@ export async function getCollectionProductsBySlug(
   pageSize: number;
 } | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("collections", "catalog");
+  cacheTag("collections", "catalog", siteTag(siteId, "collections"));
 
   const collection = db
-    .prepare("SELECT * FROM collections WHERE slug = ? AND active = 1")
-    .get(slug) as Collection | undefined;
+    .prepare(
+      "SELECT * FROM collections WHERE site_id = ? AND slug = ? AND active = 1"
+    )
+    .get(siteId, slug) as Collection | undefined;
   if (!collection) return null;
 
   const page = normalizePage(options.page);
@@ -957,12 +984,15 @@ export async function getCollectionWidgetProducts(
   limit: number
 ): Promise<{ collection: Collection; items: ProductListItem[] } | null> {
   "use cache";
+  const siteId = await getCurrentSiteId();
   cacheLife("hours");
-  cacheTag("collections", "catalog");
+  cacheTag("collections", "catalog", siteTag(siteId, "collections"));
 
   const collection = db
-    .prepare("SELECT * FROM collections WHERE id = ? AND active = 1")
-    .get(collectionId) as Collection | undefined;
+    .prepare(
+      "SELECT * FROM collections WHERE site_id = ? AND id = ? AND active = 1"
+    )
+    .get(siteId, collectionId) as Collection | undefined;
   if (!collection) return null;
 
   const safeLimit = Math.max(1, Math.min(48, Math.trunc(limit) || 20));
@@ -983,7 +1013,7 @@ export async function getCollectionWidgetProducts(
   return { collection, items: rows.map(mapProductListRow) };
 }
 
-export function fetchCollections(): CollectionSummary[] {
+export function fetchCollections(siteId: number): CollectionSummary[] {
   return db
     .prepare(
       `SELECT c.*,
@@ -992,20 +1022,22 @@ export function fetchCollections(): CollectionSummary[] {
         (SELECT COUNT(*) FROM collection_categories cc
           WHERE cc.collection_id = c.id) AS category_count
        FROM collections c
+       WHERE c.site_id = ?
        ORDER BY c.name COLLATE NOCASE`
     )
-    .all() as CollectionSummary[];
+    .all(siteId) as CollectionSummary[];
 }
 
-export function fetchCollectionOptions(): Collection[] {
+export function fetchCollectionOptions(siteId: number): Collection[] {
   return db
     .prepare(
-      "SELECT * FROM collections ORDER BY active DESC, name COLLATE NOCASE"
+      "SELECT * FROM collections WHERE site_id = ? ORDER BY active DESC, name COLLATE NOCASE"
     )
-    .all() as Collection[];
+    .all(siteId) as Collection[];
 }
 
 export function fetchCollectionEditorData(
+  siteId: number,
   collectionId: number
 ): {
   collection: Collection;
@@ -1013,8 +1045,8 @@ export function fetchCollectionEditorData(
   categoryIds: number[];
 } | null {
   const collection = db
-    .prepare("SELECT * FROM collections WHERE id = ?")
-    .get(collectionId) as Collection | undefined;
+    .prepare("SELECT * FROM collections WHERE site_id = ? AND id = ?")
+    .get(siteId, collectionId) as Collection | undefined;
   if (!collection) return null;
 
   const products = db

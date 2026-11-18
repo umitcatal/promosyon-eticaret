@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { SiteLogoFallback } from "@/components/layout/site-logo-fallback";
 import { getSiteLogoUrl } from "@/lib/queries";
+import { getCurrentSiteId } from "@/lib/site-context";
+import { getSiteIdentity } from "@/lib/site-settings";
 
 type SiteLogoProps = {
   href?: string | null;
@@ -8,7 +11,11 @@ type SiteLogoProps = {
 };
 
 export async function SiteLogo({ href = "/", tone = "light" }: SiteLogoProps) {
-  const logoUrl = await getSiteLogoUrl();
+  const [logoUrl, siteId] = await Promise.all([
+    getSiteLogoUrl(),
+    getCurrentSiteId(),
+  ]);
+  const siteName = getSiteIdentity(siteId).siteName;
 
   const content = logoUrl ? (
     <Image
@@ -19,20 +26,7 @@ export async function SiteLogo({ href = "/", tone = "light" }: SiteLogoProps) {
       width={300}
     />
   ) : (
-    <span
-      className={`font-display text-[20px] leading-none font-semibold tracking-tight ${
-        tone === "dark" ? "text-paper" : "text-ink"
-      }`}
-    >
-      Kurumsal{" "}
-      <span
-        className={`italic ${
-          tone === "dark" ? "text-brass-300" : "text-brand-600"
-        }`}
-      >
-        Promo
-      </span>
-    </span>
+    <SiteLogoFallback siteName={siteName} tone={tone} />
   );
 
   if (!href) return content;

@@ -10,6 +10,8 @@ import {
   getMenuNavItems,
   getSiteContact,
 } from "@/lib/queries";
+import { getCurrentSiteId } from "@/lib/site-context";
+import { getSiteIdentity } from "@/lib/site-settings";
 import type { MenuNavItem } from "@/lib/types";
 
 async function getCopyrightYear(): Promise<number> {
@@ -62,13 +64,15 @@ async function FooterAccountLinks() {
 }
 
 export async function Footer() {
-  const [tree, year, contact, menuItems, menuCount] = await Promise.all([
+  const [tree, year, contact, menuItems, menuCount, siteId] = await Promise.all([
     getCategoryTree(),
     getCopyrightYear(),
     getSiteContact(),
     getMenuNavItems(),
     getMenuItemsCount(),
+    getCurrentSiteId(),
   ]);
+  const siteName = getSiteIdentity(siteId).siteName;
   const navItems: MenuNavItem[] =
     menuCount > 0
       ? menuItems
@@ -184,7 +188,7 @@ export async function Footer() {
         </div>
 
         <div className="flex flex-col items-start justify-between gap-3 py-6 font-mono text-[10px] uppercase tracking-[0.16em] text-paper/40 sm:flex-row sm:items-center">
-          <p>© {year} Kurumsal Promo</p>
+          <p>© {year} {siteName}</p>
           <p>Fiyatlar teklif bazlıdır; sipariş sonrası iletilir.</p>
         </div>
       </div>
