@@ -8,6 +8,7 @@ import {
   isProductImageUrl,
   isRemoteImageUrl,
 } from "./image-urls";
+import type { SiteFavicon } from "./site-settings";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
@@ -44,6 +45,18 @@ const LOGO_BUCKET: UploadBucket = {
   dir: path.join(UPLOAD_ROOT, "logo"),
   prefix: "/uploads/logo/",
 };
+
+const FAVICON_BUCKET: UploadBucket = {
+  dir: path.join(UPLOAD_ROOT, "favicon"),
+  prefix: "/uploads/favicon/",
+};
+
+const FAVICON_SIZES = [
+  ["icon32", 32],
+  ["apple", 180],
+  ["icon192", 192],
+  ["icon512", 512],
+] as const;
 
 const BANNER_BUCKET: UploadBucket = {
   dir: path.join(UPLOAD_ROOT, "banners"),
@@ -236,6 +249,56 @@ export function saveLogoImage(file: File): Promise<string> {
 
 export function deleteLogoImage(url: string | null): Promise<void> {
   return deleteImage(url, LOGO_BUCKET);
+}
+
+export async function saveFaviconImages(file: File): Promise<SiteFavicon> {
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Lütfen bir favicon görseli seçin.");
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Görsel 5 MB'dan büyük olamaz.");
+  }
+  if (!IMAGE_EXTENSIONS.has(file.type)) {
+    throw new Error("Desteklenmeyen görsel formatı (PNG, JPEG, WEBP, GIF, AVIF).");
+  }
+
+  const input = Buffer.from(await file.arrayBuffer());
+  const id = randomUUID();
+  const images: Partial<SiteFavicon> = {};
+
+  await mkdir(FAVICON_BUCKET.dir, { recursive: true });
+
+  for (const [key, size] of FAVICON_SIZES) {
+    let output: Buffer;
+    try {
+      output = await sharp(input, { limitInputPixels: 50_000_000 })
+        .rotate()
+        .resize({
+          width: size,
+          height: size,
+          fit: "contain",
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .png()
+        .toBuffer();
+    } catch {
+      throw new Error("Görsel işlenemedi. PNG veya JPEG deneyin.");
+    }
+    const name = `${id}-${key}.png`;
+    await writeFile(path.join(FAVICON_BUCKET.dir, name), output);
+    images[key] = `${FAVICON_BUCKET.prefix}${name}`;
+  }
+
+  return images as SiteFavicon;
+}
+
+export async function deleteFaviconImages(
+  favicon: SiteFavicon | null
+): Promise<void> {
+  if (!favicon) return;
+  for (const url of Object.values(favicon)) {
+    await deleteImage(url, FAVICON_BUCKET);
+  }
 }
 
 export function saveHomeBannerImage(file: File): Promise<string> {

@@ -155,6 +155,28 @@ export async function Footer() {
                   </a>
                 </li>
               ) : null}
+              {contact.landline && contact.landlineDisplay ? (
+                <li>
+                  <a
+                    aria-label={`Sabit telefon: ${contact.landlineDisplay}`}
+                    className="group flex items-start gap-3"
+                    href={`tel:+${contact.landline}`}
+                  >
+                    <Phone
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-brass-300"
+                    />
+                    <span className="flex flex-col leading-tight">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-paper/40">
+                        Sabit Hat
+                      </span>
+                      <span className="font-display text-lg font-semibold text-paper transition-colors group-hover:text-brass-200">
+                        {contact.landlineDisplay}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ) : null}
               {contact.address ? (
                 <li className="flex items-start gap-3">
                   <MapPin
