@@ -81,7 +81,7 @@ export async function Header() {
         </div>
 
         <div className="site-header-bar mx-auto flex max-w-7xl items-center gap-3 px-4 py-4 max-[380px]:gap-2 sm:gap-8">
-          <SiteLogo />
+          <SiteLogo size="xl" />
           <DesktopSearchTrigger className="hidden flex-1 lg:block" />
           <div className="ml-auto flex items-center gap-2.5 max-[380px]:gap-1.5 sm:gap-4">
             <HeaderPhone />

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #faf8f3;
+  --background: #ffffff;
   --foreground: #14130f;
 }
 
@@ -11,7 +11,7 @@
  * lookups, which color-mix() cannot resolve through an indirection.
  */
 @theme {
-  --color-paper: #faf8f3;
+  --color-paper: #ffffff;
   --color-surface: #f3efe6;
   --color-sheet: #ffffff;
   --color-ink: #14130f;
