@@ -1,5 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { parseSiteId, resolveSiteIdByHost } from "@/lib/sites";
+import {
+  getDefaultSiteId,
+  getSiteBaseUrl,
+  parseSiteId,
+  resolveSiteIdByHost,
+} from "@/lib/sites";
 
 const SESSION_COOKIE_NAME = "promosyon_session";
 
@@ -21,13 +26,18 @@ export function proxy(request: NextRequest) {
 
   if (isBypassed(pathname)) return NextResponse.next();
 
+  const host =
+    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
+  const resolvedSiteId = resolveSiteIdByHost(host);
+  const siteId = parseSiteId(resolvedSiteId) ?? getDefaultSiteId();
+
   const hasSession = Boolean(request.cookies.get(SESSION_COOKIE_NAME)?.value);
 
   if (
     !hasSession &&
     (pathname.startsWith("/admin") || pathname.startsWith("/hesabim"))
   ) {
-    const loginUrl = new URL("/giris", request.url);
+    const loginUrl = new URL("/giris", getSiteBaseUrl(siteId));
     loginUrl.searchParams.set("next", pathname + search);
     return NextResponse.redirect(loginUrl);
   }
@@ -35,22 +45,22 @@ export function proxy(request: NextRequest) {
   const prefixed = pathname.match(/^\/(\d+)(\/.*)?$/);
   if (prefixed) {
     const response = NextResponse.next();
-    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    if (request.headers.get("x-site-rewrite") !== "1") {
+      response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    }
     return response;
   }
 
-  const host =
-    request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  const siteId = resolveSiteIdByHost(host);
-  if (parseSiteId(siteId) === null) return NextResponse.next();
-
   const target = new URL(
-    `/${siteId}${pathname === "/" ? "/" : pathname}`,
+    `/${siteId}${pathname === "/" ? "" : pathname}`,
     request.url
   );
   target.search = search;
 
-  return NextResponse.rewrite(target);
+  const headers = new Headers(request.headers);
+  headers.set("x-site-rewrite", "1");
+
+  return NextResponse.rewrite(target, { request: { headers } });
 }
 
 export const config = {
