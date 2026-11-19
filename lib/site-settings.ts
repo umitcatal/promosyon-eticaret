@@ -29,7 +29,17 @@ export const SEO_TITLE_KEY = "seo_title";
 export const SEO_DESCRIPTION_KEY = "seo_description";
 export const OG_IMAGE_KEY = "og_image_url";
 export const LOGO_URL_KEY = "logo_url";
+export const LOGO_WIDTH_HEADER_KEY = "logo_width_header";
+export const LOGO_WIDTH_FOOTER_KEY = "logo_width_footer";
 export const FAVICON_KEY = "favicon";
+
+export const LOGO_WIDTH_MIN = 40;
+export const LOGO_WIDTH_MAX = 600;
+
+export type SiteLogoWidths = {
+  header: number | null;
+  footer: number | null;
+};
 
 const DEFAULT_SITE_NAME = "Kurumsal Promo";
 const DEFAULT_SEO_DESCRIPTION =
@@ -97,6 +107,26 @@ export function setSiteSetting(siteId: number, key: string, value: string) {
 
 export function getSiteFavicon(siteId: number): SiteFavicon | null {
   return parseFavicon(getSiteSetting(siteId, FAVICON_KEY));
+}
+
+export function parseLogoWidth(raw: string | null): number | null {
+  if (!raw) return null;
+  const value = Number(raw.trim());
+  if (
+    !Number.isInteger(value) ||
+    value < LOGO_WIDTH_MIN ||
+    value > LOGO_WIDTH_MAX
+  ) {
+    return null;
+  }
+  return value;
+}
+
+export function getSiteLogoWidths(siteId: number): SiteLogoWidths {
+  return {
+    header: parseLogoWidth(getSiteSetting(siteId, LOGO_WIDTH_HEADER_KEY)),
+    footer: parseLogoWidth(getSiteSetting(siteId, LOGO_WIDTH_FOOTER_KEY)),
+  };
 }
 
 export function getSiteSettings(siteId: number): Record<string, string> {

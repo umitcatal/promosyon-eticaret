@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getSiteLogoUrl } from "@/lib/queries";
+import { getSiteLogoUrl, getSiteLogoWidth } from "@/lib/queries";
 
 type SiteLogoProps = {
   href?: string | null;
   tone?: "light" | "dark";
   size?: "md" | "lg" | "xl" | "2xl";
+  placement?: "header" | "footer";
 };
 
 const SIZES = {
@@ -19,16 +20,21 @@ export async function SiteLogo({
   href = "/",
   tone = "light",
   size = "md",
+  placement,
 }: SiteLogoProps) {
-  const logoUrl = await getSiteLogoUrl();
+  const [logoUrl, width] = await Promise.all([
+    getSiteLogoUrl(),
+    placement ? getSiteLogoWidth(placement) : Promise.resolve(null),
+  ]);
   const sizing = SIZES[size];
 
   const content = logoUrl ? (
     <Image
       alt="Site logosu"
-      className={`${sizing.image} w-auto rounded-sm bg-white p-1`}
+      className={`${width ? "h-auto max-w-full" : sizing.image} w-auto rounded-sm bg-white p-1`}
       height={64}
       src={logoUrl}
+      style={width ? { width: `${width}px` } : undefined}
       width={300}
     />
   ) : (

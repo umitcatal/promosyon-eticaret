@@ -20,6 +20,7 @@ import { getAdminSiteId } from "@/lib/site-request";
 import {
   getSiteFavicon,
   getSiteIdentity,
+  getSiteLogoWidths,
   getSiteSetting,
 } from "@/lib/site-settings";
 import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
@@ -34,6 +35,7 @@ export default async function AdminSettingsPage() {
   const identity = getSiteIdentity(siteId);
   const priceXmlUrl = getPriceXmlUrl() ?? "";
   const logoUrl = getSiteSetting(siteId, "logo_url");
+  const logoWidths = getSiteLogoWidths(siteId);
   const favicon = getSiteFavicon(siteId);
   const googleTag = getGoogleTagIdSetting(siteId);
   const vatRate = getVatRate();
@@ -76,10 +78,15 @@ export default async function AdminSettingsPage() {
         <p className="mt-1 text-sm leading-6 text-zinc-500">
           Yüklenen logo, sitede &quot;{identity.siteName}&quot; yazısının
           göründüğü header ve footer alanlarında gösterilir. Logo
-          yüklenmediğinde yazı korunur.
+          yüklenmediğinde yazı korunur. Header ve footer genişlikleri ayrı ayrı
+          ayarlanabilir.
         </p>
         <div className="mt-4">
-          <LogoForm logoUrl={logoUrl} />
+          <LogoForm
+            footerWidth={logoWidths.footer}
+            headerWidth={logoWidths.header}
+            logoUrl={logoUrl}
+          />
         </div>
       </section>
 

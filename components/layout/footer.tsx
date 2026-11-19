@@ -91,7 +91,7 @@ export async function Footer() {
       <div className="mx-auto max-w-7xl px-4">
         <div className="grid gap-10 border-b border-paper/10 py-14 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-12">
           <div>
-            <SiteLogo href={null} tone="dark" />
+            <SiteLogo href={null} placement="footer" tone="dark" />
             <p className="mt-5 max-w-xs text-sm leading-7 text-paper/55">
               Kurumsal promosyon ürünlerinde kalem, çanta, teknoloji ve daha
               fazlası. Şirket logonuzla özelleştirilebilen binlerce ürün çeşidi.

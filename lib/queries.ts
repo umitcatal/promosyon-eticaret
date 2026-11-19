@@ -14,7 +14,7 @@ import {
 import { normalizeSearchQuery, toLikePattern } from "./search-fold";
 import { siteTag } from "./cache-tags";
 import { getCurrentSiteId } from "./site-context";
-import { getSiteSetting } from "./site-settings";
+import { getSiteSetting, getSiteLogoWidths } from "./site-settings";
 import type {
   Category,
   CategoryNode,
@@ -399,6 +399,18 @@ export async function getSiteLogoUrl(): Promise<string | null> {
 
   const url = getSiteSetting(siteId, "logo_url");
   return url && url.trim() ? url.trim() : null;
+}
+
+export async function getSiteLogoWidth(
+  placement: "header" | "footer"
+): Promise<number | null> {
+  "use cache";
+  const siteId = await getCurrentSiteId();
+  cacheLife("hours");
+  cacheTag("settings", siteTag(siteId, "settings"));
+
+  const widths = getSiteLogoWidths(siteId);
+  return placement === "header" ? widths.header : widths.footer;
 }
 
 export async function getGoogleTagId(): Promise<GoogleTagId | null> {

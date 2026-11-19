@@ -36,7 +36,15 @@ import {
 import { syncCatalog } from "@/lib/sync";
 import { siteTag } from "@/lib/cache-tags";
 import { getAdminSiteId } from "@/lib/site-request";
-import { getSiteIdentity, getSiteSetting, setSiteSetting } from "@/lib/site-settings";
+import {
+  LOGO_WIDTH_FOOTER_KEY,
+  LOGO_WIDTH_HEADER_KEY,
+  LOGO_WIDTH_MAX,
+  LOGO_WIDTH_MIN,
+  getSiteIdentity,
+  getSiteSetting,
+  setSiteSetting,
+} from "@/lib/site-settings";
 import { VAT_RATE_SETTING_KEY, VAT_RATES } from "@/lib/vat";
 import {
   formatWhatsAppNumber,
@@ -868,6 +876,57 @@ export async function removeLogoAction(_formData: FormData): Promise<void> {
   if (current) await deleteLogoImage(current);
   updateTag("settings");
   updateTag(siteTag(siteId, "settings"));
+}
+
+function parseLogoWidthInput(
+  value: FormDataEntryValue | null
+): number | null | "invalid" {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < LOGO_WIDTH_MIN ||
+    parsed > LOGO_WIDTH_MAX
+  ) {
+    return "invalid";
+  }
+  return parsed;
+}
+
+export async function saveLogoWidthsAction(
+  _prevState: AdminActionState,
+  formData: FormData
+): Promise<AdminActionState> {
+  await requireAdmin();
+  const siteId = await getAdminSiteId();
+  const header = parseLogoWidthInput(formData.get("headerWidth"));
+  const footer = parseLogoWidthInput(formData.get("footerWidth"));
+
+  if (header === "invalid" || footer === "invalid") {
+    return {
+      error: `Logo genişliği ${LOGO_WIDTH_MIN}–${LOGO_WIDTH_MAX} px arasında bir tam sayı olmalıdır.`,
+    };
+  }
+
+  setSiteSetting(
+    siteId,
+    LOGO_WIDTH_HEADER_KEY,
+    header === null ? "" : String(header)
+  );
+  setSiteSetting(
+    siteId,
+    LOGO_WIDTH_FOOTER_KEY,
+    footer === null ? "" : String(footer)
+  );
+  updateTag("settings");
+  updateTag(siteTag(siteId, "settings"));
+  return {
+    ok: true,
+    message: "Logo genişlikleri kaydedildi.",
+    nonce: crypto.randomUUID(),
+  };
 }
 
 export async function syncPricesAction(): Promise<AdminActionState> {
