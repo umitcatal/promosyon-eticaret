@@ -4,7 +4,7 @@ import { AdminNav } from "@/components/admin/admin-nav";
 import { SiteSwitcher } from "@/components/admin/site-switcher";
 import { requireAdmin } from "@/lib/auth";
 import { getAdminSiteId } from "@/lib/site-request";
-import { listSites } from "@/lib/site-settings";
+import { getSiteDisplayName, listSites } from "@/lib/site-settings";
 import { getSiteBaseUrl } from "@/lib/sites";
 
 export const instant = false;
@@ -16,7 +16,10 @@ export const metadata: Metadata = {
 export default async function AdminLayout({ children }: LayoutProps<"/[site]/admin">) {
   const user = await requireAdmin();
   const siteId = await getAdminSiteId();
-  const sites = listSites();
+  const sites = listSites().map((site) => ({
+    id: site.id,
+    name: getSiteDisplayName(site.id),
+  }));
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8 lg:flex-row">

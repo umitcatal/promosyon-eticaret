@@ -1,13 +1,12 @@
 "use client";
 
 import { switchAdminSiteAction } from "@/app/actions/site";
-import type { SiteRow } from "@/lib/site-settings";
 
 export function SiteSwitcher({
   sites,
   activeSiteId,
 }: {
-  sites: SiteRow[];
+  sites: { id: number; name: string }[];
   activeSiteId: number;
 }) {
   return (
