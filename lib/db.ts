@@ -139,6 +139,20 @@ db.exec(`
     value TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS redirects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL DEFAULT 1 REFERENCES sites(id) ON DELETE CASCADE,
+    source TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    status_code INTEGER NOT NULL DEFAULT 301,
+    note TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(site_id, source)
+  );
+  CREATE INDEX IF NOT EXISTS idx_redirects_site ON redirects(site_id, active);
+
   CREATE TABLE IF NOT EXISTS pages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT NOT NULL UNIQUE,

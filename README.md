@@ -15,6 +15,8 @@ Kurumsal promosyon ürünleri satan, ürün/kategori verilerini XML beslemesinde
   kategorileri mega menü olarak gösteren menü öğeleri (`/admin/menu`)
 - Rich text editörlü içerik sayfaları; sayfa adresi kod tarafındaki bir rota ile
   çakışırsa Next.js statik rotayı öncelikler (`/admin/sayfalar`)
+- Eski site adresleri için yönlendirme yönetimi: tek URL veya desen kuralları,
+  301/302 seçimi, pasife alma (`/admin/yonlendirmeler`)
 - Ürün/kategori XML beslemesinden otomatik senkronizasyon; XML önce
   `data/xml/urunler.xml` dosyasına yazılır, DB'ye oradan işlenir
 - API'ye ulaşılamadığında klasördeki mevcut XML dosyasıyla güncelleme
@@ -186,6 +188,23 @@ satırları pasife almaz, kodlarını değiştirmez ve fiyatlarını güncelleme
 
 Şema değişiklikleri (`source`, `images`) uygulama ilk açılışta `ensureColumn`
 ile mevcut veritabanına eklenir; backfill gerekmez, PM2 restart yeterlidir.
+
+## Yönlendirmeler (Eski Adresler)
+
+Eski PHP sitesinden kalan ve Google'da indexlenmiş adresler admin paneldeki
+**Yönlendirmeler** ekranından (`/admin/yonlendirmeler`) yönetilir. Kurallar
+site bazlıdır ve kaydedildiği anda `proxy.ts` üzerinden uygulanır.
+
+- **Tek URL**: `/kategoriDetay/12/kalem` → `/kategori/kalem`
+- **Desen**: `/kategoriDetay/:id/:slug` → `/kategori/:slug` (eşleşen değişken
+  değerleri hedefe aktarılır; `:ad*` joker olarak kalan yolları yakalar)
+- Hedef, site içi bir yol (`/kategori/...`) veya tam adres (`https://...`)
+  olabilir; gelen sorgu parametreleri hedefe eklenir.
+- 301 (kalıcı) veya 302 (geçici) seçilebilir; kurallar silinmeden pasife
+  alınabilir.
+- Kaynak adresler büyük/küçük harfe duyarlıdır. `/admin`, `/hesabim`, `/api`,
+  `/uploads` ile başlayan adreslere ve sitede mevcut bir sayfaya karşılık gelen
+  adreslere kural eklenemez; desenlerin ilk bölümü sabit olmalıdır.
 
 ## Yayına Alma (VPS)
 
