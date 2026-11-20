@@ -140,12 +140,30 @@ function NewReferenceFields() {
               }))
             );
           }}
-          required
           type="file"
         />
         <p className="mt-1 text-xs text-zinc-400">
-          JPEG, PNG, WEBP, GIF veya AVIF • tek seferde en fazla 10 dosya • toplam
-          6 MB • her dosya en fazla 5 MB. Şeffaf PNG en iyi sonucu verir.
+          JPEG, PNG, WEBP, GIF veya AVIF • tek seferde en fazla 10 görsel •
+          toplam 6 MB • her dosya en fazla 5 MB. Şeffaf PNG en iyi sonucu verir.
+        </p>
+      </div>
+
+      <div>
+        <label className={labelClass} htmlFor="reference-image-urls">
+          veya görsel URL&apos;leri
+        </label>
+        <textarea
+          className={`${inputClass} min-h-24 font-mono text-xs`}
+          id="reference-image-urls"
+          name="imageUrls"
+          placeholder={
+            "https://ornek.com/logo-1.png\nhttps://ornek.com/logo-2.png | Şirket Adı"
+          }
+        />
+        <p className="mt-1 text-xs text-zinc-400">
+          Her satıra bir adres yazın; isterseniz “adres | Şirket Adı” biçiminde
+          isim ekleyin. Görseller sunucuya indirilip optimize edilir. Dosya ve
+          URL aynı anda kullanılabilir.
         </p>
       </div>
 
@@ -189,8 +207,8 @@ function NewReferencesForm() {
       <div>
         <p className="text-sm font-bold text-zinc-800">Logo Yükle</p>
         <p className="text-xs text-zinc-500">
-          Birden fazla logo seçebilir, her logoya opsiyonel şirket adı
-          girebilirsiniz. Logolar otomatik olarak listenin sonuna eklenir.
+          Dosya yükleyebilir veya görsel adresi girebilirsiniz. Her logoya
+          opsiyonel şirket adı eklenebilir; logolar listenin sonuna eklenir.
         </p>
       </div>
 
@@ -284,8 +302,13 @@ function EditReferenceForm({ reference }: { reference: ClientReference }) {
           />
         </div>
         <p className="mt-1 text-xs text-zinc-400">
-          Boş bırakılırsa mevcut logo korunur.
+          Dosya boş bırakılırsa ve aşağıya adres girilmezse mevcut logo korunur.
         </p>
+        <input
+          className={`${inputClass} mt-2`}
+          name="imageUrl"
+          placeholder="veya görsel URL'si: https://ornek.com/logo.png"
+        />
       </div>
 
       {state.error ? (

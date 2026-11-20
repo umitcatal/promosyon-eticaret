@@ -5,8 +5,13 @@ import type { AdminActionState } from "@/app/actions/admin";
 import { requireAdmin } from "@/lib/auth";
 import { siteTag } from "@/lib/cache-tags";
 import { db } from "@/lib/db";
+import { isRemoteImageUrl } from "@/lib/image-urls";
 import { getAdminSiteId } from "@/lib/site-request";
-import { deleteReferenceImage, saveReferenceImage } from "@/lib/uploads";
+import {
+  deleteReferenceImage,
+  saveReferenceImage,
+  saveReferenceImageFromUrl,
+} from "@/lib/uploads";
 
 const MAX_BATCH_FILES = 10;
 const MAX_BATCH_BYTES = 6 * 1024 * 1024;
@@ -14,6 +19,25 @@ const MAX_BATCH_BYTES = 6 * 1024 * 1024;
 function textOrNull(value: FormDataEntryValue | null): string | null {
   const text = String(value ?? "").trim();
   return text === "" ? null : text;
+}
+
+// Her satır "https://..." ya da "https://... | Şirket adı" biçiminde.
+function parseReferenceUrlEntries(
+  raw: FormDataEntryValue | null
+): { url: string; name: string | null }[] {
+  return String(raw ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const separator = line.indexOf("|");
+      if (separator === -1) return { url: line, name: null };
+      return {
+        url: line.slice(0, separator).trim(),
+        name: line.slice(separator + 1).trim() || null,
+      };
+    })
+    .filter((entry) => entry.url !== "");
 }
 
 function revalidateReferences(siteId: number): void {
@@ -32,22 +56,42 @@ export async function createClientReferencesAction(
     .getAll("images")
     .filter((entry): entry is File => entry instanceof File && entry.size > 0);
   const names = formData.getAll("names");
+  const urlEntries = parseReferenceUrlEntries(formData.get("imageUrls"));
 
-  if (files.length === 0) {
-    return { error: "Lütfen en az bir görsel seçin." };
+  const totalCount = files.length + urlEntries.length;
+  if (totalCount === 0) {
+    return {
+      error: "En az bir görsel dosyası seçin veya bir görsel adresi girin.",
+    };
   }
-  if (files.length > MAX_BATCH_FILES) {
-    return { error: `Tek seferde en fazla ${MAX_BATCH_FILES} görsel yükleyin.` };
+  if (totalCount > MAX_BATCH_FILES) {
+    return {
+      error: `Tek seferde en fazla ${MAX_BATCH_FILES} görsel ekleyin.`,
+    };
   }
   const totalBytes = files.reduce((total, file) => total + file.size, 0);
   if (totalBytes > MAX_BATCH_BYTES) {
     return { error: "Toplam görsel boyutu 6 MB'ı aşamaz." };
   }
+  const invalidUrl = urlEntries.find(
+    (entry) => entry.url.length > 2048 || !isRemoteImageUrl(entry.url)
+  );
+  if (invalidUrl) {
+    return { error: `Geçersiz görsel adresi: ${invalidUrl.url}` };
+  }
 
   const savedUrls: string[] = [];
+  const entries: { imageUrl: string; name: string | null }[] = [];
   try {
-    for (const file of files) {
-      savedUrls.push(await saveReferenceImage(file));
+    for (let index = 0; index < files.length; index += 1) {
+      const saved = await saveReferenceImage(files[index]);
+      savedUrls.push(saved);
+      entries.push({ imageUrl: saved, name: textOrNull(names[index] ?? null) });
+    }
+    for (const entry of urlEntries) {
+      const saved = await saveReferenceImageFromUrl(entry.url);
+      savedUrls.push(saved);
+      entries.push({ imageUrl: saved, name: entry.name });
     }
 
     db.transaction(() => {
@@ -61,13 +105,8 @@ export async function createClientReferencesAction(
            (site_id, image_url, name, sort_order, active)
          VALUES (?, ?, ?, ?, 1)`
       );
-      savedUrls.forEach((url, index) => {
-        insert.run(
-          siteId,
-          url,
-          textOrNull(names[index] ?? null),
-          next + index
-        );
+      entries.forEach((entry, index) => {
+        insert.run(siteId, entry.imageUrl, entry.name, next + index);
       });
     })();
   } catch (error) {
@@ -78,7 +117,7 @@ export async function createClientReferencesAction(
   revalidateReferences(siteId);
   return {
     ok: true,
-    message: `${savedUrls.length} referans eklendi.`,
+    message: `${entries.length} referans eklendi.`,
     nonce: crypto.randomUUID(),
   };
 }
@@ -114,12 +153,16 @@ export async function updateClientReferenceAction(
     : existing.active;
   const file = formData.get("image");
   const hasNewImage = file instanceof File && file.size > 0;
+  const imageUrlInput = String(formData.get("imageUrl") ?? "").trim();
 
   let imageUrl = existing.image_url;
   let uploadedUrl: string | null = null;
   try {
     if (hasNewImage) {
       uploadedUrl = await saveReferenceImage(file);
+      imageUrl = uploadedUrl;
+    } else if (imageUrlInput) {
+      uploadedUrl = await saveReferenceImageFromUrl(imageUrlInput);
       imageUrl = uploadedUrl;
     }
 

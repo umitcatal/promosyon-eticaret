@@ -206,7 +206,7 @@ async function readImageBody(response: Response): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-export async function saveCategoryImageFromUrl(rawUrl: string): Promise<string> {
+async function downloadRemoteImage(rawUrl: string): Promise<Buffer> {
   let url = rawUrl.trim();
   if (url.length > 2048 || !isRemoteImageUrl(url)) {
     throw new Error("Geçerli bir http(s) görsel adresi girin.");
@@ -239,9 +239,13 @@ export async function saveCategoryImageFromUrl(rawUrl: string): Promise<string> 
     if (!response.ok) {
       throw new Error(`Görsel indirilemedi (HTTP ${response.status}).`);
     }
-    return writeCategoryImage(await readImageBody(response));
+    return readImageBody(response);
   }
   throw new Error("Görsel indirilemedi: çok fazla yönlendirme.");
+}
+
+export async function saveCategoryImageFromUrl(rawUrl: string): Promise<string> {
+  return writeCategoryImage(await downloadRemoteImage(rawUrl));
 }
 
 export function deleteCategoryImage(url: string | null): Promise<void> {
@@ -279,6 +283,17 @@ export async function saveReferenceImage(file: File): Promise<string> {
     return await writeReferenceImage(Buffer.from(await file.arrayBuffer()));
   } catch {
     throw new Error("Görsel işlenemedi. JPEG, PNG veya WEBP deneyin.");
+  }
+}
+
+export async function saveReferenceImageFromUrl(
+  rawUrl: string
+): Promise<string> {
+  const input = await downloadRemoteImage(rawUrl);
+  try {
+    return await writeReferenceImage(input);
+  } catch {
+    throw new Error("Görsel işlenemedi. JPEG, PNG veya WEBP adresi deneyin.");
   }
 }
 
