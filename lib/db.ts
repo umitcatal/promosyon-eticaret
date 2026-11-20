@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import {
   DEFAULT_CAROUSEL_STYLE,
   DEFAULT_PROCESS_STEPS,
+  DEFAULT_REFERENCES_CONFIG,
   HOME_WIDGET_META,
 } from "./home-widgets";
 import { foldTr } from "./search-fold";
@@ -211,6 +212,19 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_home_widget_banners_widget
   ON home_widget_banners(widget_id, sort_order, id);
 
+  CREATE TABLE IF NOT EXISTS client_references (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    site_id INTEGER NOT NULL DEFAULT 1,
+    image_url TEXT NOT NULL,
+    name TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_client_references_site
+  ON client_references(site_id, active, sort_order, id);
+
   CREATE TABLE IF NOT EXISTS collections (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -337,6 +351,8 @@ function setSiteSettingValue(siteId: number, key: string, value: string): void {
 
 const HOME_WIDGETS_SEED_KEY = "home_widgets_seeded";
 const RECENTLY_VIEWED_WIDGET_SEED_KEY = "recently_viewed_widget_seeded";
+const REFERENCES_WIDGET_SEED_KEY = "references_widget_seeded";
+const REFERENCES_MENU_SEED_KEY = "references_menu_seeded";
 
 function insertRecentlyViewedWidget(
   siteId: number,
@@ -482,7 +498,98 @@ function ensureRecentlyViewedWidget(siteId: number): void {
   setSiteSettingValue(siteId, RECENTLY_VIEWED_WIDGET_SEED_KEY, "1");
 }
 
+function insertReferencesWidget(siteId: number, sortOrder: number): void {
+  const defaults = HOME_WIDGET_META.references.defaults;
+
+  db.prepare(
+    `INSERT INTO home_widgets
+       (site_id, type, eyebrow, title, subtitle, link, link_label, banner_layout, aspect, item_limit, config, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    siteId,
+    "references",
+    defaults.eyebrow,
+    defaults.title,
+    defaults.subtitle,
+    defaults.link,
+    defaults.link_label,
+    1,
+    "wide",
+    defaults.item_limit,
+    JSON.stringify({ references: DEFAULT_REFERENCES_CONFIG }),
+    sortOrder
+  );
+}
+
+function ensureReferencesWidget(siteId: number): void {
+  if (getSiteSettingValue(siteId, REFERENCES_WIDGET_SEED_KEY) === "1") {
+    return;
+  }
+
+  const { total } = db
+    .prepare(
+      "SELECT COUNT(*) AS total FROM home_widgets WHERE site_id = ? AND type = 'references'"
+    )
+    .get(siteId) as { total: number };
+
+  if (total === 0) {
+    const { next } = db
+      .prepare(
+        "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM home_widgets WHERE site_id = ?"
+      )
+      .get(siteId) as { next: number };
+    insertReferencesWidget(siteId, next);
+  }
+
+  setSiteSettingValue(siteId, REFERENCES_WIDGET_SEED_KEY, "1");
+}
+
+function ensureReferencesMenuLink(siteId: number): void {
+  if (getSiteSettingValue(siteId, REFERENCES_MENU_SEED_KEY) === "1") {
+    return;
+  }
+
+  const existing = db
+    .prepare(
+      "SELECT id FROM menu_items WHERE site_id = ? AND href IN ('/referanslar', '/referanslar/') LIMIT 1"
+    )
+    .get(siteId) as { id: number } | undefined;
+
+  if (!existing) {
+    const { count } = db
+      .prepare("SELECT COUNT(*) AS count FROM menu_items WHERE site_id = ?")
+      .get(siteId) as { count: number };
+
+    db.transaction(() => {
+      let next = (
+        db
+          .prepare(
+            "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM menu_items WHERE site_id = ?"
+          )
+          .get(siteId) as { next: number }
+      ).next;
+
+      const insert = db.prepare(
+        `INSERT INTO menu_items
+           (site_id, label, type, href, page_id, open_in_new_tab, sort_order, active)
+         VALUES (?, ?, ?, ?, NULL, 0, ?, 1)`
+      );
+
+      // Boş menüde header'daki "Ürünler" yedeği kaybolmasın diye katalog linki de eklenir.
+      if (count === 0) {
+        insert.run(siteId, "Ürünler", "categories", "/urunler", next);
+        next += 1;
+      }
+      insert.run(siteId, "Referanslarımız", "link", "/referanslar", next);
+    })();
+  }
+
+  setSiteSettingValue(siteId, REFERENCES_MENU_SEED_KEY, "1");
+}
+
 for (const siteId of getSiteIds()) {
   seedHomeWidgets(siteId);
   ensureRecentlyViewedWidget(siteId);
+  ensureReferencesWidget(siteId);
+  ensureReferencesMenuLink(siteId);
 }

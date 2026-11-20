@@ -20,6 +20,7 @@ import type {
   CategoryNode,
   CategoryOption,
   CategoryTreeItem,
+  ClientReference,
   Collection,
   CollectionProductOption,
   CollectionSummary,
@@ -916,6 +917,31 @@ export async function getHomeWidgets(): Promise<HomeWidgetWithBanners[]> {
   cacheTag("homepage", siteTag(siteId, "homepage"));
 
   return fetchHomeWidgets(siteId, { activeOnly: true });
+}
+
+export function fetchClientReferences(
+  siteId: number,
+  options: { activeOnly?: boolean } = {}
+): ClientReference[] {
+  const activeOnly = options.activeOnly ?? false;
+
+  return db
+    .prepare(
+      `SELECT id, image_url, name, sort_order, active, created_at, updated_at
+       FROM client_references
+       WHERE site_id = ?${activeOnly ? " AND active = 1" : ""}
+       ORDER BY sort_order, id`
+    )
+    .all(siteId) as ClientReference[];
+}
+
+export async function getClientReferences(): Promise<ClientReference[]> {
+  "use cache";
+  const siteId = await getCurrentSiteId();
+  cacheLife("hours");
+  cacheTag("references", siteTag(siteId, "references"));
+
+  return fetchClientReferences(siteId, { activeOnly: true });
 }
 
 export async function getCollectionBySlug(

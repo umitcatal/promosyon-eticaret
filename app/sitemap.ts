@@ -52,6 +52,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     )
     .all(siteId) as { slug: string; updated_at: string }[];
 
+  const references = db
+    .prepare(
+      "SELECT MAX(updated_at) AS lastmod FROM client_references WHERE site_id = ? AND active = 1"
+    )
+    .get(siteId) as { lastmod: string | null };
+
   const collections = db
     .prepare(
       "SELECT slug, updated_at FROM collections WHERE active = 1 AND site_id = ?"
@@ -68,6 +74,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/urunler`,
       changeFrequency: "daily",
       priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/referanslar`,
+      lastModified: references.lastmod
+        ? parseSqliteDate(references.lastmod)
+        : undefined,
+      changeFrequency: "monthly",
+      priority: 0.4,
     },
     ...categories
       .filter((category) => isSafeSlug(category.slug))

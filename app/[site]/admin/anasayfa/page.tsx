@@ -1,5 +1,9 @@
 import { HomeWidgetManager } from "@/components/admin/home-widget-manager";
-import { fetchCollectionOptions, fetchHomeWidgets } from "@/lib/queries";
+import {
+  fetchClientReferences,
+  fetchCollectionOptions,
+  fetchHomeWidgets,
+} from "@/lib/queries";
 import { getAdminSiteId } from "@/lib/site-request";
 
 export const metadata = {
@@ -10,6 +14,9 @@ export default async function AdminHomePage() {
   const siteId = await getAdminSiteId();
   const widgets = fetchHomeWidgets(siteId);
   const collections = fetchCollectionOptions(siteId);
+  const referenceCount = fetchClientReferences(siteId, {
+    activeOnly: true,
+  }).length;
   const active = widgets.filter((widget) => widget.active === 1).length;
 
   return (
@@ -24,7 +31,11 @@ export default async function AdminHomePage() {
         </p>
       </div>
 
-      <HomeWidgetManager collections={collections} widgets={widgets} />
+      <HomeWidgetManager
+        collections={collections}
+        referenceCount={referenceCount}
+        widgets={widgets}
+      />
     </div>
   );
 }

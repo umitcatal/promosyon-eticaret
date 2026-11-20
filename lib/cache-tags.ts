@@ -4,6 +4,7 @@ export type SiteCacheScope =
   | "slider"
   | "homepage"
   | "collections"
+  | "references"
   | "settings";
 
 export function siteTag(siteId: number, scope: SiteCacheScope): string {

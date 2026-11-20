@@ -103,6 +103,16 @@ export type SliderItem = {
   active: number;
 };
 
+export type ClientReference = {
+  id: number;
+  image_url: string;
+  name: string | null;
+  sort_order: number;
+  active: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Page = {
   id: number;
   slug: string;
@@ -145,6 +155,7 @@ export type HomeWidgetType =
   | "banner"
   | "collection"
   | "recently_viewed"
+  | "references"
   | "seo_text";
 
 export type HomeWidgetBannerLayout = 1 | 2 | 3;
@@ -178,11 +189,21 @@ export type CollectionWidgetConfig = CarouselStyleConfig & {
   collectionId: number;
 };
 
+export type HomeReferencesRows = 1 | 2 | 3 | 4;
+
+export type HomeReferencesSpeed = "slow" | "normal" | "fast";
+
+export type HomeReferencesConfig = {
+  rows: HomeReferencesRows;
+  speed: HomeReferencesSpeed;
+};
+
 export type HomeWidgetConfig = {
   steps?: HomeProcessStep[];
   seo?: HomeSeoTextConfig;
   collection?: CollectionWidgetConfig;
   recentlyViewed?: CarouselStyleConfig;
+  references?: HomeReferencesConfig;
 };
 
 export type HomeWidgetBanner = {

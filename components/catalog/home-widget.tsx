@@ -11,6 +11,7 @@ import {
   ProductLedger,
 } from "@/components/catalog/product-card";
 import { RecentlyViewedSlider } from "@/components/catalog/recently-viewed-slider";
+import { ReferencesMarquee } from "@/components/catalog/references";
 import { HeroFallback, Slider } from "@/components/catalog/slider";
 import { SeoTextBlock } from "@/components/catalog/seo-text-block";
 import {
@@ -26,9 +27,11 @@ import {
   carouselClassNames,
   COLLECTION_IMAGE_SIZES,
   DEFAULT_CAROUSEL_STYLE,
+  DEFAULT_REFERENCES_CONFIG,
 } from "@/lib/home-widgets";
 import {
   getCategoryCardImage,
+  getClientReferences,
   getCollectionWidgetProducts,
   getFeaturedProducts,
   getHomeCategoryTree,
@@ -399,6 +402,34 @@ function SeoTextWidget({ widget }: { widget: HomeWidgetWithBanners }) {
   );
 }
 
+async function ReferencesWidget({
+  widget,
+}: {
+  widget: HomeWidgetWithBanners;
+}) {
+  const references = await getClientReferences();
+  if (references.length === 0) return null;
+
+  const config = widget.config.references ?? DEFAULT_REFERENCES_CONFIG;
+
+  return (
+    <section
+      aria-label={widget.title ?? "Referanslarımız"}
+      className="mt-20 sm:mt-28"
+    >
+      <div className="mx-auto w-full max-w-7xl px-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+          <WidgetHeading widget={widget} />
+          <WidgetLink label={widget.link_label} link={widget.link} />
+        </div>
+      </div>
+      <div className="mt-8 space-y-3 sm:mt-10 sm:space-y-4">
+        <ReferencesMarquee config={config} references={references} />
+      </div>
+    </section>
+  );
+}
+
 function RecentlyViewedWidget({ widget }: { widget: HomeWidgetWithBanners }) {
   return (
     <RecentlyViewedSlider
@@ -435,6 +466,8 @@ export async function HomeWidgetSection({
       return <CollectionWidget widget={widget} />;
     case "recently_viewed":
       return <RecentlyViewedWidget widget={widget} />;
+    case "references":
+      return <ReferencesWidget widget={widget} />;
     case "seo_text":
       return <SeoTextWidget widget={widget} />;
     default:

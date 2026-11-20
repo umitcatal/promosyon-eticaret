@@ -63,6 +63,11 @@ const BANNER_BUCKET: UploadBucket = {
   prefix: "/uploads/banners/",
 };
 
+const REFERENCE_BUCKET: UploadBucket = {
+  dir: path.join(UPLOAD_ROOT, "references"),
+  prefix: "/uploads/references/",
+};
+
 const CONTENT_BUCKET: UploadBucket = {
   dir: path.join(UPLOAD_ROOT, "content"),
   prefix: "/uploads/content/",
@@ -241,6 +246,44 @@ export async function saveCategoryImageFromUrl(rawUrl: string): Promise<string> 
 
 export function deleteCategoryImage(url: string | null): Promise<void> {
   return deleteImage(url, CATEGORY_BUCKET);
+}
+
+async function writeReferenceImage(input: Buffer): Promise<string> {
+  const output = await sharp(input, { limitInputPixels: 50_000_000 })
+    .rotate()
+    .resize({
+      width: 1200,
+      height: 600,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .webp({ quality: 90, alphaQuality: 100 })
+    .toBuffer();
+  await mkdir(REFERENCE_BUCKET.dir, { recursive: true });
+  const name = `${randomUUID()}.webp`;
+  await writeFile(path.join(REFERENCE_BUCKET.dir, name), output);
+  return `${REFERENCE_BUCKET.prefix}${name}`;
+}
+
+export async function saveReferenceImage(file: File): Promise<string> {
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Lütfen bir görsel seçin.");
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("Görsel 5 MB'dan büyük olamaz.");
+  }
+  if (!IMAGE_EXTENSIONS.has(file.type)) {
+    throw new Error("Desteklenmeyen görsel formatı (JPEG, PNG, WEBP, GIF, AVIF).");
+  }
+  try {
+    return await writeReferenceImage(Buffer.from(await file.arrayBuffer()));
+  } catch {
+    throw new Error("Görsel işlenemedi. JPEG, PNG veya WEBP deneyin.");
+  }
+}
+
+export function deleteReferenceImage(url: string | null): Promise<void> {
+  return deleteImage(url, REFERENCE_BUCKET);
 }
 
 export function saveLogoImage(file: File): Promise<string> {

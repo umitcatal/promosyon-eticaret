@@ -18,14 +18,19 @@ import {
   updateHomeWidgetAction,
 } from "@/app/actions/home";
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
-import { CarouselStyleFields } from "@/components/admin/home-widget-fields";
+import {
+  CarouselStyleFields,
+  ReferencesStyleFields,
+} from "@/components/admin/home-widget-fields";
 import { inputClass, labelClass } from "@/components/ui/styles";
 import {
   BANNER_ASPECT_OPTIONS,
   BANNER_LAYOUT_OPTIONS,
   BANNER_WIDTH_OPTIONS,
+  DEFAULT_REFERENCES_CONFIG,
   HOME_WIDGET_META,
   HOME_WIDGET_TYPE_OPTIONS,
+  REFERENCES_SPEED_LABELS,
 } from "@/lib/home-widgets";
 import type {
   CarouselStyleConfig,
@@ -156,9 +161,14 @@ function carouselSummary(
 
 function widgetSummary(
   widget: HomeWidgetWithBanners,
-  collectionName?: string
+  collectionName?: string,
+  referenceCount = 0
 ): string {
   switch (widget.type) {
+    case "references": {
+      const config = widget.config.references ?? DEFAULT_REFERENCES_CONFIG;
+      return `${config.rows} satır • ${REFERENCES_SPEED_LABELS[config.speed]} • ${referenceCount} logo`;
+    }
     case "banner":
       return `${widget.banners.length} görsel • ${widget.banner_layout}'li düzen • ${
         widget.banner_width === "full" ? "Tam genişlik" : "Container"
@@ -201,6 +211,7 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
   const meta = HOME_WIDGET_META[type];
   const isCollection = type === "collection";
   const isRecentlyViewed = type === "recently_viewed";
+  const isReferences = type === "references";
   const noCollections = isCollection && collections.length === 0;
 
   return (
@@ -330,6 +341,10 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
             <CarouselStyleFields idPrefix="widget-carousel" />
           </>
         ) : null}
+
+        {isReferences ? (
+          <ReferencesStyleFields idPrefix="widget-references" />
+        ) : null}
       </div>
 
       {state.error ? (
@@ -352,9 +367,11 @@ function AddWidgetForm({ collections }: { collections: Collection[] }) {
 
 function WidgetEditForm({
   collections,
+  referenceCount,
   widget,
 }: {
   collections: Collection[];
+  referenceCount: number;
   widget: HomeWidgetWithBanners;
 }) {
   const [state, formAction, pending] = useActionState(
@@ -371,6 +388,7 @@ function WidgetEditForm({
   const isSeoText = widget.type === "seo_text";
   const isCollection = widget.type === "collection";
   const isRecentlyViewed = widget.type === "recently_viewed";
+  const isReferences = widget.type === "references";
   const collectionConfig = widget.config.collection;
   const carouselConfig = isCollection
     ? collectionConfig
@@ -551,6 +569,13 @@ function WidgetEditForm({
         </>
       ) : null}
 
+      {isReferences ? (
+        <ReferencesStyleFields
+          config={widget.config.references}
+          idPrefix={`references-${widget.id}`}
+        />
+      ) : null}
+
       {hasItemLimit ? (
         <div>
           <label className={labelClass} htmlFor={`limit-${widget.id}`}>
@@ -716,6 +741,22 @@ function WidgetEditForm({
             Slider ekranından
           </Link>{" "}
           yönetilir.
+        </div>
+      ) : null}
+
+      {isReferences ? (
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-600 sm:col-span-2">
+          Logolar{" "}
+          <Link
+            className="font-semibold text-orange-700 underline"
+            href="/admin/referanslar"
+          >
+            Referanslar ekranından
+          </Link>{" "}
+          yönetilir.{" "}
+          {referenceCount > 0
+            ? `${referenceCount} aktif logo ana sayfada akar.`
+            : "Henüz aktif logo yok; bölüm logo yüklenene kadar görünmez."}
         </div>
       ) : null}
 
@@ -1110,9 +1151,11 @@ function BannerManager({ widget }: { widget: HomeWidgetWithBanners }) {
 
 export function HomeWidgetManager({
   collections,
+  referenceCount,
   widgets,
 }: {
   collections: Collection[];
+  referenceCount: number;
   widgets: HomeWidgetWithBanners[];
 }) {
   const [optimisticWidgets, applyOptimistic] = useOptimistic(
@@ -1247,7 +1290,7 @@ export function HomeWidgetManager({
                     {widgetTitle(widget)}
                   </p>
                   <p className="truncate text-xs text-zinc-500">
-                    {widgetSummary(widget, collectionName)}
+                    {widgetSummary(widget, collectionName, referenceCount)}
                   </p>
                 </div>
 
@@ -1328,6 +1371,7 @@ export function HomeWidgetManager({
                 <>
                   <WidgetEditForm
                     collections={collections}
+                    referenceCount={referenceCount}
                     widget={widget}
                   />
                   {widget.type === "banner" ? (

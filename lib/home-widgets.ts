@@ -5,6 +5,9 @@ import type {
   HomeBannerAspect,
   HomeBannerWidth,
   HomeProcessStep,
+  HomeReferencesConfig,
+  HomeReferencesRows,
+  HomeReferencesSpeed,
   HomeSeoTextConfig,
   HomeWidgetBannerLayout,
   HomeWidgetConfig,
@@ -35,6 +38,7 @@ export const HOME_WIDGET_TYPES: readonly HomeWidgetType[] = [
   "featured_products",
   "process",
   "new_products",
+  "references",
   "seo_text",
 ];
 
@@ -159,6 +163,19 @@ export const HOME_WIDGET_META: Record<HomeWidgetType, HomeWidgetMeta> = {
       item_limit: 6,
     },
   },
+  references: {
+    label: "Referanslar",
+    description:
+      "Müşteri logoları; dönüşümlü yönlerde kayan şeritler halinde gösterilir. Görseller Referanslar ekranından yönetilir.",
+    defaults: {
+      eyebrow: "Referanslar",
+      title: "Referanslarımız",
+      subtitle: null,
+      link: "/referanslar",
+      link_label: "Tüm Referanslar",
+      item_limit: 0,
+    },
+  },
   seo_text: {
     label: "SEO Metni",
     description:
@@ -214,6 +231,45 @@ export const BANNER_ASPECT_OPTIONS: readonly {
   { value: "standard", label: "Standart (16:9)" },
   { value: "square", label: "Kare (1:1)" },
 ];
+
+export const REFERENCES_ROW_OPTIONS: readonly {
+  value: HomeReferencesRows;
+  label: string;
+}[] = [
+  { value: 1, label: "1 satır" },
+  { value: 2, label: "2 satır" },
+  { value: 3, label: "3 satır" },
+  { value: 4, label: "4 satır" },
+];
+
+export const REFERENCES_SPEED_OPTIONS: readonly {
+  value: HomeReferencesSpeed;
+  label: string;
+}[] = [
+  { value: "slow", label: "Yavaş" },
+  { value: "normal", label: "Normal" },
+  { value: "fast", label: "Hızlı" },
+];
+
+export const REFERENCES_SPEED_LABELS: Record<HomeReferencesSpeed, string> = {
+  slow: "Yavaş",
+  normal: "Normal",
+  fast: "Hızlı",
+};
+
+export const REFERENCES_SPEED_DURATION_SECONDS: Record<
+  HomeReferencesSpeed,
+  number
+> = {
+  slow: 80,
+  normal: 50,
+  fast: 30,
+};
+
+export const DEFAULT_REFERENCES_CONFIG: HomeReferencesConfig = {
+  rows: 3,
+  speed: "normal",
+};
 
 export const COLLECTION_DESKTOP_OPTIONS: readonly {
   value: 4 | 5 | 6;
@@ -344,6 +400,16 @@ export function isBannerAspect(value: unknown): value is HomeBannerAspect {
 
 export function isBannerWidth(value: unknown): value is HomeBannerWidth {
   return value === "container" || value === "full";
+}
+
+export function isReferencesRows(value: unknown): value is HomeReferencesRows {
+  return value === 1 || value === 2 || value === 3 || value === 4;
+}
+
+export function isReferencesSpeed(
+  value: unknown
+): value is HomeReferencesSpeed {
+  return value === "slow" || value === "normal" || value === "fast";
 }
 
 export function bannerGridClass(columns: number): string {
@@ -484,6 +550,24 @@ export function normalizeCarouselStyle(
   };
 }
 
+export function normalizeReferencesConfig(
+  input: unknown
+): HomeReferencesConfig | undefined {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return undefined;
+  }
+
+  const record = input as { rows?: unknown; speed?: unknown };
+  return {
+    rows: isReferencesRows(record.rows)
+      ? record.rows
+      : DEFAULT_REFERENCES_CONFIG.rows,
+    speed: isReferencesSpeed(record.speed)
+      ? record.speed
+      : DEFAULT_REFERENCES_CONFIG.speed,
+  };
+}
+
 export function normalizeCollectionConfig(
   input: unknown
 ): CollectionWidgetConfig | undefined {
@@ -525,6 +609,11 @@ export function parseHomeWidgetConfig(
       (parsed as { recentlyViewed?: unknown }).recentlyViewed
     );
     if (recentlyViewed) config.recentlyViewed = recentlyViewed;
+
+    const references = normalizeReferencesConfig(
+      (parsed as { references?: unknown }).references
+    );
+    if (references) config.references = references;
 
     return config;
   } catch {

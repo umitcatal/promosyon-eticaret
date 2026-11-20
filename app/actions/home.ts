@@ -9,6 +9,7 @@ import { getAdminSiteId } from "@/lib/site-request";
 import {
   clampItemLimit,
   DEFAULT_PROCESS_STEPS,
+  DEFAULT_REFERENCES_CONFIG,
   HOME_WIDGET_META,
   isBannerAspect,
   isBannerLayout,
@@ -18,11 +19,13 @@ import {
   normalizeCarouselStyle,
   normalizeCollectionConfig,
   normalizeProcessSteps,
+  normalizeReferencesConfig,
 } from "@/lib/home-widgets";
 import { sanitizeRichText } from "@/lib/sanitize";
 import type {
   CarouselStyleConfig,
   CollectionWidgetConfig,
+  HomeReferencesConfig,
   HomeWidgetBanner,
   HomeWidgetRow,
   HomeWidgetType,
@@ -76,6 +79,19 @@ function readCarouselStyle(
   return normalizeCarouselStyle(carouselStyleFields(formData));
 }
 
+function readReferencesConfig(
+  formData: FormData
+): HomeReferencesConfig | undefined {
+  return normalizeReferencesConfig({
+    rows: Number(
+      formData.get("referencesRows") ?? DEFAULT_REFERENCES_CONFIG.rows
+    ),
+    speed: String(
+      formData.get("referencesSpeed") ?? DEFAULT_REFERENCES_CONFIG.speed
+    ),
+  });
+}
+
 function collectionExists(siteId: number, collectionId: number): boolean {
   return Boolean(
     db
@@ -123,6 +139,11 @@ export async function createHomeWidgetAction(
     if (!carouselStyle) return { error: "Slider ayarları geçersiz." };
   }
 
+  let referencesConfig: HomeReferencesConfig | undefined;
+  if (type === "references") {
+    referencesConfig = readReferencesConfig(formData);
+  }
+
   const config =
     type === "process"
       ? JSON.stringify({ steps: DEFAULT_PROCESS_STEPS })
@@ -134,7 +155,9 @@ export async function createHomeWidgetAction(
           ? JSON.stringify({ collection: collectionConfig })
           : type === "recently_viewed" && carouselStyle
             ? JSON.stringify({ recentlyViewed: carouselStyle })
-            : "{}";
+            : type === "references" && referencesConfig
+              ? JSON.stringify({ references: referencesConfig })
+              : "{}";
 
   try {
     db.transaction(() => {
@@ -250,6 +273,11 @@ export async function updateHomeWidgetAction(
     if (!carouselStyle) return { error: "Slider ayarları geçersiz." };
   }
 
+  let referencesConfig: HomeReferencesConfig | undefined;
+  if (type === "references") {
+    referencesConfig = readReferencesConfig(formData);
+  }
+
   let itemLimit = existing.item_limit;
   if (type === "categories") {
     itemLimit = clampItemLimit(
@@ -299,6 +327,8 @@ export async function updateHomeWidgetAction(
     config = JSON.stringify({ collection: collectionConfig });
   } else if (type === "recently_viewed" && carouselStyle) {
     config = JSON.stringify({ recentlyViewed: carouselStyle });
+  } else if (type === "references" && referencesConfig) {
+    config = JSON.stringify({ references: referencesConfig });
   }
 
   try {

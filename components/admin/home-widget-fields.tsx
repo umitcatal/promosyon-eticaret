@@ -9,8 +9,11 @@ import {
   COLLECTION_MOBILE_LAYOUT_OPTIONS,
   COLLECTION_MOBILE_OPTIONS,
   COLLECTION_SLIDE_STEP_OPTIONS,
+  DEFAULT_REFERENCES_CONFIG,
+  REFERENCES_ROW_OPTIONS,
+  REFERENCES_SPEED_OPTIONS,
 } from "@/lib/home-widgets";
-import type { CarouselStyleConfig } from "@/lib/types";
+import type { CarouselStyleConfig, HomeReferencesConfig } from "@/lib/types";
 
 export function CarouselStyleFields({
   config,
@@ -123,6 +126,57 @@ export function CarouselStyleFields({
           gelince ve dokunulduğunda duraklar.
         </p>
       </div>
+    </>
+  );
+}
+
+export function ReferencesStyleFields({
+  config,
+  idPrefix,
+}: {
+  config?: HomeReferencesConfig;
+  idPrefix: string;
+}) {
+  return (
+    <>
+      <div>
+        <label className={labelClass} htmlFor={`${idPrefix}-rows`}>
+          Satır sayısı
+        </label>
+        <select
+          className={inputClass}
+          defaultValue={config?.rows ?? DEFAULT_REFERENCES_CONFIG.rows}
+          id={`${idPrefix}-rows`}
+          name="referencesRows"
+        >
+          {REFERENCES_ROW_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelClass} htmlFor={`${idPrefix}-speed`}>
+          Akış hızı
+        </label>
+        <select
+          className={inputClass}
+          defaultValue={config?.speed ?? DEFAULT_REFERENCES_CONFIG.speed}
+          id={`${idPrefix}-speed`}
+          name="referencesSpeed"
+        >
+          {REFERENCES_SPEED_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-xs text-zinc-400 sm:col-span-2">
+        Yönler otomatik dönüşümlüdür: 1. satır sağa, 2. satır sola, 3. satır
+        sağa akar. Logolar Referanslar ekranından yüklenir.
+      </p>
     </>
   );
 }

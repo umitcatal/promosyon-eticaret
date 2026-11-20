@@ -515,3 +515,85 @@ body {
   background-color: #efeae2;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.035' stroke-width='1'%3E%3Cpath d='M8 14h9M12.5 9.5v9M43 47h8M47 43v8M50 13h6M24 33h5M33 18h4M17 50h6M54 32h5'/%3E%3Ccircle cx='31' cy='52' r='2.5'/%3E%3Ccircle cx='51' cy='22' r='2'/%3E%3C/g%3E%3C/svg%3E");
 }
+
+/*
+ * Referans logoları şeridi. Track iki özdeş grup taşır; her grubun
+ * padding-right'i kendi genişliğine dahil olduğu için -50% kaydırma
+ * döngü noktasında birebir eşleşir ve dikiş görünmez.
+ */
+.marquee {
+  --marquee-gap: 1.25rem;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+
+.marquee-track {
+  animation: marquee-scroll var(--marquee-duration, 50s) linear infinite;
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
+.marquee[data-direction="right"] .marquee-track {
+  animation-direction: reverse;
+}
+
+.marquee-group {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--marquee-gap);
+  padding-right: var(--marquee-gap);
+}
+
+@keyframes marquee-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (hover: hover) {
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .marquee-track {
+    animation: none;
+    width: 100%;
+  }
+
+  .marquee-group {
+    flex-wrap: wrap;
+    padding-right: 0;
+    row-gap: 1rem;
+    width: 100%;
+  }
+
+  .marquee-group[data-marquee-clone],
+  .marquee-group [data-marquee-copy] {
+    display: none;
+  }
+}

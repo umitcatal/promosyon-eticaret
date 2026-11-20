@@ -9,6 +9,7 @@ const REFERENCE_CHECKS = [
   "SELECT 1 AS found FROM site_settings WHERE instr(value, ?) > 0 LIMIT 1",
   "SELECT 1 AS found FROM slider WHERE image_url = ? LIMIT 1",
   "SELECT 1 AS found FROM home_widget_banners WHERE image_url = ? LIMIT 1",
+  "SELECT 1 AS found FROM client_references WHERE image_url = ? LIMIT 1",
   "SELECT 1 AS found FROM categories WHERE image_url = ? LIMIT 1",
   "SELECT 1 AS found FROM pages WHERE instr(content, ?) > 0 LIMIT 1",
   "SELECT 1 AS found FROM variants WHERE instr(images, ?) > 0 LIMIT 1",
