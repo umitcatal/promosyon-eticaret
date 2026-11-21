@@ -93,6 +93,7 @@ export function proxy(request: NextRequest) {
     `/${siteId}${pathname === "/" ? "" : pathname}`,
     request.url
   );
+  target.protocol = "http:";
   target.search = search;
 
   const headers = new Headers(request.headers);
