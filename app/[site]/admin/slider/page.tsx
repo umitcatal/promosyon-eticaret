@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { getAdminSiteId } from "@/lib/site-request";
 import type { SliderItem } from "@/lib/types";
 
+export const instant = false;
+
 export const metadata = {
   title: "Slider",
 };

@@ -10,6 +10,8 @@ import {
   type OrderRow,
 } from "@/lib/orders";
 
+export const instant = false;
+
 export const metadata = {
   title: "Siparişler",
 };

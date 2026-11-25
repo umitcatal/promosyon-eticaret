@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { getAdminSiteId } from "@/lib/site-request";
 import type { Page } from "@/lib/types";
 
+export const instant = false;
+
 export const metadata = {
   title: "Sayfayı Düzenle",
 };

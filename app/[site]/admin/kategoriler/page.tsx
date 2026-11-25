@@ -2,6 +2,8 @@ import { AdminCategoryList } from "@/components/admin/category-list";
 import { type CategoryAdminRow } from "@/components/admin/category-form";
 import { db } from "@/lib/db";
 
+export const instant = false;
+
 export const metadata = {
   title: "Kategoriler",
 };

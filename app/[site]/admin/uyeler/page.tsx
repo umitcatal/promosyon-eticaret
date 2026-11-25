@@ -2,6 +2,8 @@ import { updateUserRoleAction } from "@/app/actions/admin";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 
+export const instant = false;
+
 export const metadata = {
   title: "Üyeler",
 };

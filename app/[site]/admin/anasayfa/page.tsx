@@ -6,6 +6,8 @@ import {
 } from "@/lib/queries";
 import { getAdminSiteId } from "@/lib/site-request";
 
+export const instant = false;
+
 export const metadata = {
   title: "Anasayfa",
 };

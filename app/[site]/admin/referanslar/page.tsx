@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { fetchClientReferences } from "@/lib/queries";
 import { getAdminSiteId } from "@/lib/site-request";
 
+export const instant = false;
+
 export const metadata = {
   title: "Referanslar",
 };

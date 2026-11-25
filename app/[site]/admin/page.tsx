@@ -7,6 +7,8 @@ import { db, getSetting } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 import { getAdminSiteId } from "@/lib/site-request";
 
+export const instant = false;
+
 export const metadata = {
   title: "Yönetim Paneli",
 };

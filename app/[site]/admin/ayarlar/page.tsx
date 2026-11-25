@@ -26,6 +26,8 @@ import {
 import { readWhatsAppSupport } from "@/lib/whatsapp-settings";
 import { DEFAULT_PRODUCT_XML_URL } from "@/lib/xml";
 
+export const instant = false;
+
 export const metadata = {
   title: "Ayarlar",
 };

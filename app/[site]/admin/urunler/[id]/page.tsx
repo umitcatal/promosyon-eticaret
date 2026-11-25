@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { descriptionToText, parseImages } from "@/lib/format";
 import { fetchAdminCategoryOptions } from "@/lib/queries";
 
+export const instant = false;
+
 export const metadata = {
   title: "Ürün Düzenle",
 };

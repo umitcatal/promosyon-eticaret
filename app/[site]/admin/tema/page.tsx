@@ -3,6 +3,8 @@ import { getAdminSiteId } from "@/lib/site-request";
 import { getSiteIdentity } from "@/lib/site-settings";
 import { readSiteTheme } from "@/lib/site-theme";
 
+export const instant = false;
+
 export const metadata = {
   title: "Tema",
 };

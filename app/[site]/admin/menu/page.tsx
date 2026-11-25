@@ -6,6 +6,8 @@ import {
 import { db } from "@/lib/db";
 import { getAdminSiteId } from "@/lib/site-request";
 
+export const instant = false;
+
 export const metadata = {
   title: "Menü",
 };
