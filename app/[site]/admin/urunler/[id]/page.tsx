@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { DeleteProductButton } from "@/components/admin/delete-product-button";
 import { ProductEditForm } from "@/components/admin/product-edit-form";
 import { db } from "@/lib/db";
 import { descriptionToText, parseImages } from "@/lib/format";
@@ -49,7 +50,7 @@ export default async function AdminProductEditPage({
   if (!Number.isInteger(productId) || productId <= 0) notFound();
 
   const product = db
-    .prepare("SELECT * FROM products WHERE id = ?")
+    .prepare("SELECT * FROM products WHERE id = ? AND deleted_at IS NULL")
     .get(productId) as ProductRow | undefined;
   if (!product) notFound();
 
@@ -84,29 +85,35 @@ export default async function AdminProductEditPage({
         <span className="font-medium text-zinc-800">{product.name}</span>
       </nav>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="text-lg font-bold text-zinc-900">{product.name}</h2>
-        <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
-          Kod: {product.code}
-        </span>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${
-            product.source === "manual"
-              ? "bg-orange-50 text-orange-700"
-              : "bg-zinc-100 text-zinc-600"
-          }`}
-        >
-          {product.source === "manual" ? "Manuel" : "XML"}
-        </span>
-        {category ? (
-          <Link
-            className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 transition hover:bg-orange-100"
-            href={`/kategori/${category.slug}`}
-            target="_blank"
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-bold text-zinc-900">{product.name}</h2>
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600">
+            Kod: {product.code}
+          </span>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+              product.source === "manual"
+                ? "bg-orange-50 text-orange-700"
+                : "bg-zinc-100 text-zinc-600"
+            }`}
           >
-            {category.name} ↗
-          </Link>
-        ) : null}
+            {product.source === "manual" ? "Manuel" : "XML"}
+          </span>
+          {category ? (
+            <Link
+              className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 transition hover:bg-orange-100"
+              href={`/kategori/${category.slug}`}
+              target="_blank"
+            >
+              {category.name} ↗
+            </Link>
+          ) : null}
+        </div>
+        <DeleteProductButton
+          productId={product.id}
+          productName={product.name}
+        />
       </div>
 
       <ProductEditForm

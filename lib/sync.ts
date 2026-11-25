@@ -157,7 +157,7 @@ export async function syncCatalog(): Promise<SyncResult> {
       tags = excluded.tags,
       baski_fiyatlari = excluded.baski_fiyatlari,
       category_id = excluded.category_id,
-      active = 1,
+      active = CASE WHEN deleted_at IS NOT NULL THEN 0 ELSE 1 END,
       updated_at = datetime('now')
   `);
   const upsertVariant = db.prepare(`

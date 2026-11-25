@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import type { AdminActionState } from "@/app/actions/admin";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
@@ -159,6 +160,89 @@ export async function createProductAction(
       variantCount: variants.length,
     },
   };
+}
+
+function productVariantCount(productId: number): number {
+  const row = db
+    .prepare("SELECT COUNT(*) AS total FROM variants WHERE product_id = ?")
+    .get(productId) as { total: number };
+  return row.total;
+}
+
+export async function deleteProductAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const productId = Number(formData.get("productId"));
+  if (!Number.isInteger(productId) || productId <= 0) {
+    redirect("/admin/urunler/cop?hata=bulunamadi");
+  }
+
+  const product = db
+    .prepare(
+      "SELECT id, name, code FROM products WHERE id = ? AND deleted_at IS NULL"
+    )
+    .get(productId) as
+    | { id: number; name: string; code: string }
+    | undefined;
+  if (!product) redirect("/admin/urunler/cop?hata=bulunamadi");
+
+  const variantCount = productVariantCount(productId);
+
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE products
+       SET deleted_at = datetime('now'), deleted_active = active, active = 0,
+           updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(productId);
+
+    db.prepare(
+      `INSERT INTO product_operations
+         (product_id, product_name, product_code, action, variant_count)
+       VALUES (?, ?, ?, 'delete', ?)`
+    ).run(productId, product.name, product.code, variantCount);
+  }).immediate();
+
+  updateTag("catalog");
+  redirect("/admin/urunler/cop?durum=silindi");
+}
+
+export async function restoreProductAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+
+  const productId = Number(formData.get("productId"));
+  if (!Number.isInteger(productId) || productId <= 0) {
+    redirect("/admin/urunler/cop?hata=bulunamadi");
+  }
+
+  const product = db
+    .prepare(
+      "SELECT id, name, code FROM products WHERE id = ? AND deleted_at IS NOT NULL"
+    )
+    .get(productId) as
+    | { id: number; name: string; code: string }
+    | undefined;
+  if (!product) redirect("/admin/urunler/cop?hata=bulunamadi");
+
+  const variantCount = productVariantCount(productId);
+
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE products
+       SET deleted_at = NULL, active = COALESCE(deleted_active, 1),
+           deleted_active = NULL, updated_at = datetime('now')
+       WHERE id = ?`
+    ).run(productId);
+
+    db.prepare(
+      `INSERT INTO product_operations
+         (product_id, product_name, product_code, action, variant_count)
+       VALUES (?, ?, ?, 'restore', ?)`
+    ).run(productId, product.name, product.code, variantCount);
+  }).immediate();
+
+  updateTag("catalog");
+  redirect("/admin/urunler/cop?durum=geri-alindi");
 }
 
 export async function uploadProductImageAction(

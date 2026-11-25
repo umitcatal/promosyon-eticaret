@@ -128,7 +128,9 @@ export async function updateProductAction(
   }
 
   const product = db
-    .prepare("SELECT id, source FROM products WHERE id = ?")
+    .prepare(
+      "SELECT id, source FROM products WHERE id = ? AND deleted_at IS NULL"
+    )
     .get(productId) as { id: number; source: string } | undefined;
   if (!product) {
     return { error: "Ürün bulunamadı." };

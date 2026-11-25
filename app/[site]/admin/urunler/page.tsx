@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
 import { Pagination } from "@/components/catalog/pagination";
 import { ProductCreateDialog } from "@/components/admin/product-create-dialog";
 import { db } from "@/lib/db";
@@ -36,9 +37,10 @@ export default async function AdminProductsPage({
   const offset = (Math.max(1, page) - 1) * PAGE_SIZE;
 
   const pattern = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
-  const condition = q
+  const search = q
     ? "(p.name LIKE ? ESCAPE '\\' OR p.code LIKE ? ESCAPE '\\')"
     : "1 = 1";
+  const condition = `${search} AND p.deleted_at IS NULL`;
   const filterParams = q ? [pattern, pattern] : [];
 
   const total = (
@@ -61,6 +63,14 @@ export default async function AdminProductsPage({
        LIMIT ? OFFSET ?`
     )
     .all(...filterParams, PAGE_SIZE, offset) as ProductAdminRow[];
+
+  const deletedTotal = (
+    db
+      .prepare(
+        "SELECT COUNT(*) AS total FROM products WHERE deleted_at IS NOT NULL"
+      )
+      .get() as { total: number }
+  ).total;
 
   const paginationQuery: Record<string, string> = q ? { q } : {};
   const categories = fetchAdminCategoryOptions();
@@ -88,6 +98,18 @@ export default async function AdminProductsPage({
               Ara
             </button>
           </form>
+          <Link
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            href="/admin/urunler/cop"
+          >
+            <Trash2 className="h-4 w-4" />
+            Silinen Ürünler
+            {deletedTotal > 0 ? (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                {deletedTotal}
+              </span>
+            ) : null}
+          </Link>
           <ProductCreateDialog categories={categories} />
         </div>
       </div>

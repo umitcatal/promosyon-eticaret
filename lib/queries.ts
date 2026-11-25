@@ -1092,7 +1092,7 @@ export function fetchCollectionEditorData(
       `SELECT p.id, p.code, p.name, p.slug
        FROM collection_products cp
        JOIN products p ON p.id = cp.product_id
-       WHERE cp.collection_id = ?
+       WHERE cp.collection_id = ? AND p.deleted_at IS NULL
        ORDER BY cp.sort_order, p.id`
     )
     .all(collectionId) as CollectionProductOption[];

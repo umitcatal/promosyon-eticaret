@@ -81,6 +81,16 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_variants_product ON variants(product_id);
 
+  CREATE TABLE IF NOT EXISTS product_operations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    product_name TEXT NOT NULL,
+    product_code TEXT,
+    action TEXT NOT NULL,
+    variant_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     first_name TEXT NOT NULL,
@@ -310,6 +320,8 @@ ensureColumn("products", "meta_description", "TEXT");
 ensureColumn("products", "source", "TEXT NOT NULL DEFAULT 'xml'");
 ensureColumn("variants", "source", "TEXT NOT NULL DEFAULT 'xml'");
 ensureColumn("products", "images", "TEXT NOT NULL DEFAULT '[]'");
+ensureColumn("products", "deleted_at", "TEXT");
+ensureColumn("products", "deleted_active", "INTEGER");
 ensureColumn("categories", "meta_title", "TEXT");
 ensureColumn("categories", "meta_description", "TEXT");
 
