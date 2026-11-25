@@ -81,12 +81,12 @@ export function ProductLedger({ products }: { products: ProductListItem[] }) {
   if (products.length === 0) return null;
 
   return (
-    <ol className="border-t border-line">
+    <ol className="min-w-0 border-t border-line">
       {products.map((product) => (
         <li key={product.id} className="border-b border-line">
           <div className="flex items-center gap-2">
             <Link
-              className="group flex min-w-0 flex-1 items-center gap-4 py-4"
+              className="group flex min-w-0 flex-1 items-center gap-3 py-4 sm:gap-4"
               href={`/urun/${product.slug}`}
             >
               <span className="relative size-12 shrink-0 overflow-hidden rounded-sm border border-line bg-surface/50 sm:size-14">
@@ -101,11 +101,13 @@ export function ProductLedger({ products }: { products: ProductListItem[] }) {
               <span className="hidden w-24 shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-muted sm:block">
                 {product.code}
               </span>
-              <span className="min-w-0 flex-1 truncate font-display text-[15px] font-medium text-ink transition-colors group-hover:text-brand-700">
-                {product.name}
-              </span>
-              <span className="shrink-0 text-right">
-                <PriceLabel max={product.max_price} min={product.min_price} />
+              <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+                <span className="min-w-0 truncate font-display text-[15px] font-medium text-ink transition-colors group-hover:text-brand-700">
+                  {product.name}
+                </span>
+                <span className="shrink-0 sm:ml-auto sm:text-right">
+                  <PriceLabel max={product.max_price} min={product.min_price} />
+                </span>
               </span>
             </Link>
             <FavoriteButton
