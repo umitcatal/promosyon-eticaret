@@ -336,6 +336,7 @@ export function AdminCategoryList({ rows }: { rows: CategoryAdminRow[] }) {
         <div className="space-y-3">
           {filtered.map((row) => (
             <CategoryForm
+              categories={rows}
               category={row}
               draft={drafts[row.id]}
               key={row.id}

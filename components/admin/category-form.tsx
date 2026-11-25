@@ -3,6 +3,7 @@
 import {
   useActionState,
   useEffect,
+  useMemo,
   useState,
   type ChangeEvent,
 } from "react";
@@ -32,12 +33,62 @@ export type CategoryOrderDraft = {
   showOnHome: boolean;
 };
 
+function collectSelfAndDescendants(
+  categories: CategoryAdminRow[],
+  id: number,
+): Set<number> {
+  const excluded = new Set<number>([id]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const category of categories) {
+      if (
+        category.parent_id !== null &&
+        excluded.has(category.parent_id) &&
+        !excluded.has(category.id)
+      ) {
+        excluded.add(category.id);
+        changed = true;
+      }
+    }
+  }
+  return excluded;
+}
+
+function buildParentChoices(
+  categories: CategoryAdminRow[],
+  excluded: Set<number>,
+): { id: number; label: string }[] {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  return categories
+    .filter((category) => !excluded.has(category.id))
+    .map((category) => {
+      const chain: string[] = [];
+      let current = category.parent_id
+        ? byId.get(category.parent_id)
+        : undefined;
+      let guard = 0;
+      while (current && guard < 10) {
+        chain.unshift(current.name);
+        current = current.parent_id ? byId.get(current.parent_id) : undefined;
+        guard += 1;
+      }
+      return {
+        id: category.id,
+        label: [...chain, category.name].join(" › "),
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label, "tr"));
+}
+
 export function CategoryForm({
   category,
+  categories,
   draft,
   onDraftChange,
 }: {
   category: CategoryAdminRow;
+  categories: CategoryAdminRow[];
   draft?: CategoryOrderDraft;
   onDraftChange: (patch: Partial<CategoryOrderDraft>) => void;
 }) {
@@ -45,6 +96,7 @@ export function CategoryForm({
 
   return (
     <CategoryFormFields
+      categories={categories}
       category={category}
       draft={draft}
       formAction={formAction}
@@ -58,6 +110,7 @@ export function CategoryForm({
 
 function CategoryFormFields({
   category,
+  categories,
   draft,
   formAction,
   onDraftChange,
@@ -65,6 +118,7 @@ function CategoryFormFields({
   state,
 }: {
   category: CategoryAdminRow;
+  categories: CategoryAdminRow[];
   draft?: CategoryOrderDraft;
   formAction: (formData: FormData) => void;
   onDraftChange: (patch: Partial<CategoryOrderDraft>) => void;
@@ -73,6 +127,15 @@ function CategoryFormFields({
 }) {
   const [preview, setPreview] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
+
+  const parentChoices = useMemo(
+    () =>
+      buildParentChoices(
+        categories,
+        collectSelfAndDescendants(categories, category.id),
+      ),
+    [categories, category.id],
+  );
 
   useEffect(() => {
     return () => {
@@ -94,18 +157,66 @@ function CategoryFormFields({
   return (
     <form
       action={formAction}
-      className="grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)_90px_90px_110px_100px]"
+      className="grid gap-3 rounded-2xl border border-zinc-200 bg-white p-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.7fr)_90px_90px_110px_100px]"
     >
       <input name="categoryId" type="hidden" value={category.id} />
 
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-zinc-800">
-          {category.name}
-        </p>
-        <p className="truncate text-xs text-zinc-400">
-          {category.parent_name ? `${category.parent_name} > ` : ""}
-          {category.slug} • {category.product_count} ürün
-        </p>
+      <div className="min-w-0 space-y-2">
+        <div>
+          <label
+            className={labelClass}
+            htmlFor={`category-name-${category.id}`}
+          >
+            Ad
+          </label>
+          <input
+            className={inputClass}
+            defaultValue={category.name}
+            id={`category-name-${category.id}`}
+            name="name"
+            required
+          />
+        </div>
+        <div>
+          <label
+            className={labelClass}
+            htmlFor={`category-parent-${category.id}`}
+          >
+            Üst kategori
+          </label>
+          <select
+            className={inputClass}
+            defaultValue={
+              category.parent_id === null ? "" : String(category.parent_id)
+            }
+            id={`category-parent-${category.id}`}
+            name="parentId"
+          >
+            <option value="">Kök kategori (ana kategori)</option>
+            {parentChoices.map((choice) => (
+              <option key={choice.id} value={String(choice.id)}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 truncate text-xs text-zinc-400">
+            {category.product_count} ürün • {category.parent_name ?? "Ana kategori"}
+          </p>
+        </div>
+        <div>
+          <label
+            className={labelClass}
+            htmlFor={`category-slug-${category.id}`}
+          >
+            Adres (slug)
+          </label>
+          <input
+            className={inputClass}
+            defaultValue={category.slug}
+            id={`category-slug-${category.id}`}
+            name="slug"
+          />
+        </div>
       </div>
 
       <div>

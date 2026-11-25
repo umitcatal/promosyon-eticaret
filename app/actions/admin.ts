@@ -36,6 +36,7 @@ import {
 import { syncCatalog } from "@/lib/sync";
 import { siteTag } from "@/lib/cache-tags";
 import { getAdminSiteId } from "@/lib/site-request";
+import { slugify } from "@/lib/slug";
 import {
   LOGO_WIDTH_FOOTER_KEY,
   LOGO_WIDTH_HEADER_KEY,
@@ -358,10 +359,78 @@ export async function updateCategoryAction(
   }
 
   const existing = db
-    .prepare("SELECT image_url FROM categories WHERE id = ?")
-    .get(categoryId) as { image_url: string | null } | undefined;
+    .prepare(
+      "SELECT image_url, name, slug, parent_id FROM categories WHERE id = ?"
+    )
+    .get(categoryId) as
+    | {
+        image_url: string | null;
+        name: string;
+        slug: string;
+        parent_id: number | null;
+      }
+    | undefined;
   if (!existing) {
     return { error: "Kategori bulunamadı." };
+  }
+
+  const name =
+    formData.get("name") === null
+      ? existing.name
+      : String(formData.get("name")).trim();
+  if (!name) return { error: "Kategori adı zorunludur." };
+
+  const parentRaw = formData.get("parentId");
+  let parentId = existing.parent_id;
+  if (parentRaw !== null) {
+    const value = String(parentRaw).trim();
+    parentId = value === "" ? null : Number(value);
+    if (parentId !== null && (!Number.isInteger(parentId) || parentId <= 0)) {
+      return { error: "Geçersiz üst kategori." };
+    }
+  }
+
+  if (parentId !== null) {
+    if (parentId === categoryId) {
+      return { error: "Kategori kendi altına taşınamaz." };
+    }
+    if (
+      !db.prepare("SELECT 1 AS found FROM categories WHERE id = ?").get(parentId)
+    ) {
+      return { error: "Üst kategori bulunamadı." };
+    }
+    const isDescendant = db
+      .prepare(
+        `WITH RECURSIVE descendants(id) AS (
+           SELECT id FROM categories WHERE parent_id = ?
+           UNION ALL
+           SELECT c.id FROM categories c JOIN descendants d ON c.parent_id = d.id
+         )
+         SELECT 1 AS found FROM descendants WHERE id = ?`
+      )
+      .get(categoryId, parentId);
+    if (isDescendant) {
+      return { error: "Kategori kendi alt kategorisinin altına taşınamaz." };
+    }
+  }
+
+  const slugRaw = formData.get("slug");
+  let slug = existing.slug;
+  if (slugRaw !== null && String(slugRaw).trim() !== "") {
+    slug = slugify(String(slugRaw));
+    if (!slug) return { error: "Geçersiz adres (slug) değeri." };
+  }
+
+  const slugConflict = db
+    .prepare(
+      "SELECT 1 AS found FROM categories WHERE parent_id IS ? AND slug = ? AND id != ?"
+    )
+    .get(parentId, slug, categoryId);
+  if (slugConflict) {
+    return {
+      error:
+        "Bu üst kategori altında aynı adres (slug) ile başka bir kategori var. Lütfen adresi değiştirin.",
+    };
   }
 
   const sortOrder = Number(formData.get("sortOrder") ?? 0) || 0;
@@ -383,10 +452,13 @@ export async function updateCategoryAction(
 
     db.prepare(
       `UPDATE categories
-       SET image_url = ?, sort_order = ?, active = ?, show_on_home = ?,
-           meta_title = ?, meta_description = ?
+       SET name = ?, parent_id = ?, slug = ?, image_url = ?, sort_order = ?,
+           active = ?, show_on_home = ?, meta_title = ?, meta_description = ?
        WHERE id = ?`
     ).run(
+      name,
+      parentId,
+      slug,
       imageUrl,
       sortOrder,
       active,
